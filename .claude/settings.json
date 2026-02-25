@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [[ \"$CLAUDE_FILE_PATH\" == *.sh ]]; then shellcheck \"$CLAUDE_FILE_PATH\" 2>&1 | head -20; fi"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "repo_root=$(git rev-parse --show-toplevel 2>/dev/null) && for f in $(git diff --name-only 2>/dev/null); do [[ \"$f\" == *.sh ]] && bash -n \"$repo_root/$f\" 2>&1; done; echo 'syntax check complete'"
+          }
+        ]
+      }
+    ]
+  }
+}

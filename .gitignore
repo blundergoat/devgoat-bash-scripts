@@ -1,0 +1,16 @@
+.DS_Store
+Thumbs.db
+*:Zone.Identifier
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.env
+.env.local
+.env.*.local
+*.log
+node_modules/
+__pycache__/
+*.pyc
+.venv/
