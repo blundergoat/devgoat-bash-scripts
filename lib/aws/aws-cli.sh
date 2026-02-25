@@ -33,13 +33,13 @@ ENV_FILE="$PROJECT_ROOT/.env"
 
 if [[ -f "$ENV_FILE" ]]; then
     set -a
+    # shellcheck source=/dev/null
     source <(grep -v '^\s*#' "$ENV_FILE" | grep -v '^\s*$')
     set +a
 fi
 
 # Colors
 RED='\033[0;31m'
-GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'

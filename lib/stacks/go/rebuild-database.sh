@@ -13,6 +13,7 @@ set -euo pipefail
 #   ./lib/stacks/go/rebuild-database.sh --help   # Show help
 # =============================================================================
 
+# shellcheck source=../../../lib/stacks/_common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../_common.sh"
 
 # ---- CONFIGURATION ----
@@ -162,7 +163,8 @@ seed_data() {
 
     # Run each seed file
     for seed_file in "${seed_files_arr[@]}"; do
-        local filename=$(basename "$seed_file")
+        local filename
+        filename=$(basename "$seed_file")
         log_info "  Seeding: $filename"
 
         if docker_psql < "$seed_file"; then

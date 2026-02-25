@@ -63,7 +63,6 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
@@ -116,6 +115,7 @@ aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS 
 if [[ "$TARGET" == "all" || "$TARGET" == "$PRIMARY_TARGET_NAME" ]]; then
     log ""
     log "${BOLD}Building ${PRIMARY_TARGET_NAME} image...${NC}"
+    # shellcheck disable=SC2086
     docker build \
         ${PRIMARY_DOCKER_EXTRA_ARGS} \
         -t "${PRIMARY_REPO}:${IMAGE_TAG}" \
@@ -131,6 +131,7 @@ fi
 if [[ "$TARGET" == "all" || "$TARGET" == "$SECONDARY_TARGET_NAME" ]]; then
     log ""
     log "${BOLD}Building ${SECONDARY_TARGET_NAME} image...${NC}"
+    # shellcheck disable=SC2086
     docker build \
         ${SECONDARY_DOCKER_EXTRA_ARGS} \
         -t "${SECONDARY_REPO}:${IMAGE_TAG}" \

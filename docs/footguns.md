@@ -8,17 +8,20 @@ Cross-domain gotchas discovered in this codebase. When you cause a bug that span
 
 **Symptoms:** Script exits immediately on a non-zero return code that was expected to be handled. Or: adding `set -e` to a script that previously worked causes it to abort mid-run.
 
-**Why it happens:** Seven scripts intentionally omit `-e` from their strict mode line (`set -uo pipefail` instead of `set -euo pipefail`) because they must continue past individual check failures to report a full summary:
+**Why it happens:** Ten scripts intentionally omit `-e` from their strict mode line (`set -uo pipefail` instead of `set -euo pipefail`) because they must continue past individual check failures to report a full summary:
 
 | Script | Reason |
 |--------|--------|
 | `lib/stacks/php/verify.sh` | Runs all prerequisite checks, reports summary at end |
 | `lib/stacks/python/verify.sh` | Same pattern as PHP verify |
+| `lib/stacks/node/verify.sh` | Same pattern as PHP/Python verify |
 | `lib/stacks/php/preflight-checks.sh` | Runs quality gates, must report all failures (no explicit `set` — relies on sourced _common.sh) |
 | `lib/stacks/python/preflight-checks.sh` | Same pattern as PHP preflight (no explicit `set`) |
+| `lib/stacks/node/preflight-checks.sh` | Same pattern as PHP/Python preflight (no explicit `set`) |
 | `lib/dev/gpu-check.sh` | Probes multiple GPU backends, some will always fail |
 | `lib/dev/health-check-localdev.sh` | Checks multiple services, reports combined health status |
 | `lib/dev/start-dev.sh` | Manages multiple background processes with custom cleanup |
+| `lib/maintenance/lint-all.sh` | Lints all scripts, must report all failures |
 
 **Prevention:** Before adding `set -e` to any script, check if it uses `step`/`pass`/`fail` patterns or accumulates failures in an array. If it does, omitting `-e` is intentional.
 

@@ -2,7 +2,7 @@
 # =============================================================================
 # devgoat-bash-scripts Preflight Checks — repo-level quality gate
 # =============================================================================
-# Usage: ./scripts/preflight-checks.sh [--fix] [-h|--help]
+# Usage: ./preflight-checks.sh [--fix] [-h|--help]
 # =============================================================================
 
 set -euo pipefail
@@ -130,6 +130,7 @@ Checks performed:
   4. Bash syntax        — bash -n on all .sh files
   5. Shellcheck         — shellcheck -x (skipped if not installed)
   6. No secrets         — no .env, credentials, or key files staged
+  7. Bats tests         — bats tests/ --recursive (auto-installs bats-core if missing)
 
 OPTIONS:
     -h, --help    Show this help message
@@ -201,9 +202,14 @@ fi
 STRICT_EXCEPTIONS=(
     "lib/stacks/php/verify.sh"
     "lib/stacks/python/verify.sh"
+    "lib/stacks/node/verify.sh"
+    "lib/stacks/php/preflight-checks.sh"
+    "lib/stacks/python/preflight-checks.sh"
+    "lib/stacks/node/preflight-checks.sh"
     "lib/dev/gpu-check.sh"
     "lib/dev/health-check-localdev.sh"
     "lib/dev/start-dev.sh"
+    "lib/maintenance/lint-all.sh"
     "lib/ai-cli/_common.sh"
     "lib/stacks/_common.sh"
 )
@@ -249,7 +255,7 @@ t=$(date +%s%N)
 strict_failures=()
 for file in "${SCRIPTS[@]}"; do
     rel="${file#"$REPO_ROOT/"}"
-    content=$(head -n 20 "$file")
+    content=$(head -n 50 "$file")
 
     if is_strict_exception "$rel"; then
         # Exceptions must have at least set -uo pipefail
@@ -368,6 +374,33 @@ else
         for f in "${secret_hits[@]}"; do
             echo -e "    ${DIM}${f}${RESET}"
         done
+    fi
+fi
+
+# 7. Bats tests
+step "Bats tests (tests/)"
+t=$(date +%s%N)
+if ! command -v bats &>/dev/null; then
+    installer="$REPO_ROOT/lib/setup/install-bats-core.sh"
+    if [[ -x "$installer" ]]; then
+        echo -e "    ${DIM}bats not found; attempting install via ./lib/setup/install-bats-core.sh${RESET}"
+        if ! "$installer"; then
+            fail "bats-core install failed"
+            echo -e "    ${DIM}Install manually and re-run preflight:${RESET}"
+            echo -e "    ${DIM}sudo apt install bats | brew install bats-core | npm install -g bats${RESET}"
+        fi
+    else
+        fail "bats not installed"
+        echo -e "    ${DIM}Installer not found: ./lib/setup/install-bats-core.sh${RESET}"
+        echo -e "    ${DIM}Install manually: sudo apt install bats | brew install bats-core | npm install -g bats${RESET}"
+    fi
+fi
+
+if command -v bats &>/dev/null; then
+    if bats tests/ --recursive </dev/null; then
+        pass "$(elapsed_since "$t")"
+    else
+        fail "Bats tests failed"
     fi
 fi
 

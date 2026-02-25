@@ -26,6 +26,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
+# shellcheck disable=SC2034
 CYAN='\033[0;36m'
 DIM='\033[2m'
 BOLD='\033[1m'
@@ -55,6 +56,7 @@ fi
 # ── .env loader ──────────────────────────────────────────────────
 if [[ -f "$PROJECT_ROOT/.env" ]]; then
     set -o allexport
+    # shellcheck source=/dev/null
     source "$PROJECT_ROOT/.env"
     set +o allexport
 fi

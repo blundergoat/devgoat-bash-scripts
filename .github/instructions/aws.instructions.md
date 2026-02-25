@@ -24,7 +24,7 @@ warn()    { echo -e "${YELLOW}[tag]${NC} $*"; }
 error()   { echo -e "${RED}[tag]${NC} $*"; exit 1; }
 ```
 
-**Anomaly:** `deploy-ecr-ecs.sh` uses `[deploy]` as its prefix tag. Other aws scripts use generic `[info]`/`[ok]` style or vary. Match the existing tag in the script you're editing.
+**Notable tags:** `deploy-ecr-ecs.sh` uses `[deploy]`, `cloudfront-invalidate.sh` uses `[invalidate]`, `s3-sync.sh` uses `[s3-sync]`. Other aws scripts use generic `[info]`/`[ok]` style or vary. Match the existing tag in the script you're editing.
 
 ## Common Dependencies
 
@@ -41,9 +41,16 @@ Typical variables across aws scripts:
 - `APP_ID`, `BRANCH_NAME` — Amplify scripts
 - `SECRET_PREFIX`, `REQUIRED_SECRETS` — Secrets Manager scripts
 - `TF_OUTPUT_*`, `TF_ENV_RELPATH` — deploy/terraform scripts
+- `CLOUDFRONT_DISTRIBUTION_ID`, `TF_OUTPUT_DISTRIBUTION_ID` — cloudfront-invalidate
+- `S3_BUCKET`, `BUILD_DIR`, `CACHE_CONTROL` — s3-sync
 
 ## Security Notes
 
 - Scripts never store credentials — they rely on AWS CLI profiles or SSO
 - `secrets-manager-*.sh` scripts handle secrets; never log secret values
-- `deploy-ecr-ecs.sh` calls `aws sts get-caller-identity` to validate credentials before proceeding
+- `deploy-ecr-ecs.sh`, `cloudfront-invalidate.sh`, and `s3-sync.sh` call `aws sts get-caller-identity` to validate credentials before proceeding
+
+## Script Interactions
+
+- `s3-sync.sh` can trigger `cloudfront-invalidate.sh` after a successful sync via the `--invalidate` flag
+- Both CDN scripts can read resource IDs from Terraform output when `TF_ENV_RELPATH` is configured

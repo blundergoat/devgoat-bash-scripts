@@ -254,7 +254,7 @@ else
 
     # Wait for it to start (up to 15 seconds)
     STARTED=false
-    for i in $(seq 1 15); do
+    for _ in $(seq 1 15); do
         if curl -sf "${OLLAMA_URL}/" >/dev/null 2>&1; then
             STARTED=true
             break

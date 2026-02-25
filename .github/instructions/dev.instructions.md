@@ -25,6 +25,7 @@ Function names and tag styles vary by script — match the existing pattern in t
 | `dev/gpu-check.sh` | `set -uo pipefail` | Probes multiple GPU backends; some always fail |
 | `dev/health-check-localdev.sh` | `set -uo pipefail` | Checks multiple services, reports combined status |
 | `dev/start-dev.sh` | `set -uo pipefail` | Manages background processes with custom cleanup trap |
+| `maintenance/lint-all.sh` | `set -uo pipefail` | Lints all scripts, must report all failures |
 
 All other scripts in these directories use `set -euo pipefail`.
 
@@ -42,11 +43,26 @@ Drop-in script (no CONFIGURATION block). Supports `--path`, `--mode`, `--deep` f
 ### `maintenance/make-scripts-executable.sh`
 Drop-in. Supports `--dry-run`. Targets `scripts/` directory by default in the consuming project.
 
+### `maintenance/lint-all.sh`
+Drop-in. Runs `bash -n` + `shellcheck` on all git-tracked `.sh` files. Supports `--fix` and `--syntax-only`. Uses `set -uo pipefail` to accumulate failures.
+
+### `dev/docker-cleanup.sh`
+Drop-in. Prunes containers, images, volumes, and networks. Supports `--dry-run` and `--all` (aggressive image prune).
+
+### `dev/port-check.sh`
+Drop-in. Checks port listeners with `ss` (Linux) or `lsof` (macOS). Supports `--kill` with confirmation.
+
+### `dev/db-reset.sh`
+Template. Drops/creates database, runs migrations/seeds. Supports PostgreSQL and MySQL via `DB_ENGINE`. Uses `[db-reset]` prefix.
+
+### `setup/sync-env.sh`
+Template. Finds `.env.example` files and copies to `.env` if missing. Supports `--force` and `--diff`.
+
 ## Template vs Drop-in
 
 | Directory | Templates | Drop-ins |
 |-----------|-----------|----------|
-| `dev/` | api-load-test, dev-logs, health-check-localdev, health-check-remote, start-dev | gpu-check |
-| `maintenance/` | — | make-scripts-executable, remove-zone-identifier |
-| `setup/` | — | install-ollama, uninstall-ollama |
+| `dev/` | api-load-test, db-reset, dev-logs, docker-logs, health-check-localdev, health-check-remote, start-dev | docker-cleanup, gpu-check, port-check |
+| `maintenance/` | — | git-cleanup, lint-all, make-scripts-executable, remove-zone-identifier, scan-secrets, update-all, verify-checksums |
+| `setup/` | sync-env | install-ollama, uninstall-ollama |
 | `codegen/` | generate-api-client | generate-code-map |

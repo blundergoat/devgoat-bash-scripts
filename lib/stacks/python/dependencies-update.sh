@@ -10,6 +10,7 @@
 
 set -euo pipefail
 
+# shellcheck source=../../../lib/stacks/_common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../_common.sh"
 
 # ---- CONFIGURATION ----
@@ -36,7 +37,7 @@ if [[ ! -f "$VENV_DIR/bin/pip" ]]; then
 else
     # Upgrade pip itself
     step "pip self-update"
-    pip_self=$("$VENV_DIR/bin/pip" install --upgrade pip 2>&1)
+    "$VENV_DIR/bin/pip" install --upgrade pip >/dev/null 2>&1
     pip_self_exit=$?
     if [[ $pip_self_exit -eq 0 ]]; then
         pip_ver=$("$VENV_DIR/bin/pip" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+' | head -1)

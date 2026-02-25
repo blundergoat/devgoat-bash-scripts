@@ -56,8 +56,10 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../_common.sh"
 |--------|------|--------|
 | `php/verify.sh` | `set -uo pipefail` | Must complete all checks before summary |
 | `python/verify.sh` | `set -uo pipefail` | Same as above |
+| `node/verify.sh` | `set -uo pipefail` | Same as above |
 | `php/preflight-checks.sh` | No explicit `set` | Relies on sourced _common.sh; runs all quality gates |
 | `python/preflight-checks.sh` | No explicit `set` | Same as above |
+| `node/preflight-checks.sh` | No explicit `set` | Same as above |
 
 ## Two Script Patterns
 
@@ -67,5 +69,6 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../_common.sh"
 ## Per-Stack Notes
 
 - **Go:** Database management only (migrate, rollback, seed). Requires `golang-migrate` CLI and PostgreSQL client tools.
+- **Node.js:** Supports npm/yarn/pnpm via `PACKAGE_MANAGER` config variable. All 5 scripts use a `pm_install`/`pm_run` helper to abstract the package manager. `verify.sh` checks for eslint, jest/vitest, and tsc. `preflight-checks.sh` runs lint, type-check, tests, and Docker Compose validation.
 - **PHP:** Includes `check-complexity.php` (the only PHP file in the repo). `preflight-checks.sh` supports `--coverage-min=N` flag.
 - **Python:** Uses venv-based workflow. `preflight-checks.sh` checks for Docker Compose availability.

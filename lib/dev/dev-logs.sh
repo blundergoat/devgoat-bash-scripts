@@ -33,11 +33,9 @@ LOGS_DIR="$PROJECT_ROOT/$LOGS_SUBDIR"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
 MAGENTA='\033[0;35m'
 CYAN='\033[0;36m'
 GRAY='\033[0;90m'
-WHITE='\033[0;97m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 
@@ -162,7 +160,7 @@ tail_all() {
     fi
 
     # Cleanup on exit
-    trap "kill $API_TAIL_PID 2>/dev/null; kill ${WEB_TAIL_PID:-0} 2>/dev/null; exit 0" SIGINT SIGTERM
+    trap 'kill $API_TAIL_PID 2>/dev/null; kill ${WEB_TAIL_PID:-0} 2>/dev/null; exit 0' SIGINT SIGTERM
 
     wait
 }
@@ -195,11 +193,16 @@ show_summary() {
 
     for log in "$LOGS_DIR"/*.log; do
         if [ -f "$log" ]; then
-            local name=$(basename "$log")
-            local lines=$(wc -l < "$log" 2>/dev/null || echo 0)
-            local errors=$(grep -ciE "error" "$log" 2>/dev/null || echo 0)
-            local warns=$(grep -ciE "warn" "$log" 2>/dev/null || echo 0)
-            local size=$(du -h "$log" 2>/dev/null | cut -f1 || echo "0")
+            local name
+            name=$(basename "$log")
+            local lines
+            lines=$(wc -l < "$log" 2>/dev/null || echo 0)
+            local errors
+            errors=$(grep -ciE "error" "$log" 2>/dev/null || echo 0)
+            local warns
+            warns=$(grep -ciE "warn" "$log" 2>/dev/null || echo 0)
+            local size
+            size=$(du -h "$log" 2>/dev/null | cut -f1 || echo "0")
 
             echo -e "  ${CYAN}$name${NC}: $lines lines, ${size}"
             if [ "$errors" -gt 0 ]; then

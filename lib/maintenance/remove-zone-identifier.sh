@@ -5,8 +5,6 @@ set -euo pipefail
 # Script to recursively remove Zone.Identifier files
 # These are alternate data stream files created by Windows when downloading files
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 # Color functions for output
 info() {
     echo -e "\033[32mINFO:\033[0m $1"

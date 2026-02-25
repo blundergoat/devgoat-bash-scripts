@@ -5,6 +5,9 @@
 # Usage: ./lib/stacks/python/preflight-checks.sh
 # =============================================================================
 
+set -uo pipefail
+
+# shellcheck source=../../../lib/stacks/_common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../_common.sh"
 
 # ---- CONFIGURATION ----
@@ -15,7 +18,7 @@ PYTHON_TEST_DIR="${PYTHON_TEST_DIR:-tests/python}"
 COMPOSE_FILE_NAME="${COMPOSE_FILE_NAME:-docker-compose.yml}"
 # ---- END CONFIGURATION ----
 
-cd "$PROJECT_ROOT"
+cd "$PROJECT_ROOT" || exit 1
 agent_dir="$PROJECT_ROOT/${PYTHON_DIR}"
 
 # ── Checks ────────────────────────────────────────────────────────

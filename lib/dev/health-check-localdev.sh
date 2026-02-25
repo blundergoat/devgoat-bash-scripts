@@ -329,7 +329,6 @@ chat_result=$(curl -sf -w "\n%{http_code}" \
     -H "Content-Type: application/json" \
     -d '{"message":""}' 2>/dev/null) || true
 chat_status=$(echo "$chat_result" | tail -1)
-chat_body=$(echo "$chat_result" | head -1)
 if [[ "$chat_status" == "400" ]]; then
     pass "validates input (400)"
 elif [[ "$chat_status" =~ ^[0-9]+$ ]]; then

@@ -23,12 +23,14 @@ lib/
 │   ├── uninstall-kilo.sh
 │   └── uninstall-kiro-cli.sh
 │
-├── aws/                             # AWS infrastructure wrappers (9 scripts, all templates)
+├── aws/                             # AWS infrastructure wrappers (11 scripts, all templates)
 │   ├── amplify-health-check.sh      # Verify Amplify env vars are set
 │   ├── amplify-variables-get.sh     # Dump Amplify env vars
 │   ├── amplify-variables-set.sh     # Set Amplify env vars from .env
 │   ├── aws-cli.sh                   # AWS CLI install/upgrade, SSO login
+│   ├── cloudfront-invalidate.sh     # Invalidate CloudFront distribution cache (uses [invalidate] prefix)
 │   ├── deploy-ecr-ecs.sh           # Build → ECR push → ECS redeploy (uses [deploy] log prefix)
+│   ├── s3-sync.sh                   # Sync build artifacts to S3 bucket (uses [s3-sync] prefix)
 │   ├── secrets-manager-get.sh       # Fetch secrets by prefix
 │   ├── secrets-manager-health-check.sh  # Verify required secrets exist
 │   ├── secrets-manager-set.sh       # Create/update secrets
@@ -38,20 +40,30 @@ lib/
 │   ├── generate-api-client.sh       # TypeScript API client from OpenAPI spec (template)
 │   └── generate-code-map.sh         # Directory tree / deep file-contents map (drop-in)
 │
-├── dev/                             # Local development workflow (6 scripts)
+├── dev/                             # Local development workflow (10 scripts)
 │   ├── api-load-test.sh             # HTTP load testing with curl (template)
+│   ├── db-reset.sh                  # Drop/create/migrate/seed database (template)
 │   ├── dev-logs.sh                  # Tail and aggregate dev logs (template)
+│   ├── docker-cleanup.sh            # Prune unused Docker resources (drop-in)
+│   ├── docker-logs.sh               # Tail Docker Compose service logs (template)
 │   ├── gpu-check.sh                 # Detect GPU — NVIDIA/Apple Silicon (drop-in, omits -e)
 │   ├── health-check-localdev.sh     # Verify local services (template, omits -e)
 │   ├── health-check-remote.sh       # Check remote AWS health (template)
+│   ├── port-check.sh                # Check port listeners, show PID/process (drop-in)
 │   └── start-dev.sh                 # Start local dev environment (template, omits -e)
 │
-├── maintenance/                     # Repo housekeeping (2 scripts, both drop-in)
+├── maintenance/                     # Repo housekeeping (6 scripts, all drop-in)
+│   ├── git-cleanup.sh               # Delete merged local branches
+│   ├── lint-all.sh                  # Run bash -n + shellcheck on all scripts (omits -e)
 │   ├── make-scripts-executable.sh   # chmod +x all .sh files
-│   └── remove-zone-identifier.sh    # Remove Windows Zone.Identifier ADS files
+│   ├── remove-zone-identifier.sh    # Remove Windows Zone.Identifier ADS files
+│   ├── scan-secrets.sh              # Scan for accidentally committed secrets
+│   ├── update-all.sh                # git pull --rebase + restore executable bits
+│   └── verify-checksums.sh          # Verify file integrity via SHA-256 manifest
 │
-├── setup/                           # Tool installation (2 scripts)
+├── setup/                           # Tool installation (3 scripts)
 │   ├── install-ollama.sh            # Install Ollama for local LLM inference
+│   ├── sync-env.sh                  # Copy .env.example → .env where missing (template)
 │   └── uninstall-ollama.sh          # Uninstall Ollama
 │
 └── stacks/                          # Language-specific setup, deps, quality gates
@@ -61,6 +73,12 @@ lib/
     │   ├── db-migrate-rollback.sh   # Safe migration rollback with backup
     │   ├── rebuild-database.sh      # Drop tables, migrate, seed
     │   └── seed-data.sh             # Seed development data
+    ├── node/                        # Node.js project lifecycle (5 scripts)
+    │   ├── dependencies-install.sh  # Install from lockfile (npm ci / yarn / pnpm)
+    │   ├── dependencies-update.sh   # Update deps + audit + smoke test
+    │   ├── preflight-checks.sh      # Quality gates: eslint, tsc, jest/vitest, Docker Compose
+    │   ├── setup.sh                 # First-time project setup
+    │   └── verify.sh                # Verify Node.js tools installed (omits -e)
     ├── php/                         # PHP project lifecycle (6 scripts)
     │   ├── check-complexity.php     # Cyclomatic complexity analyzer (PHP, drop-in)
     │   ├── dependencies-install.sh  # Install from composer.lock
@@ -76,4 +94,4 @@ lib/
         └── verify.sh                # Verify Python tools installed (omits -e)
 ```
 
-**Total:** 52 files (50 shell scripts, 1 PHP script, 1 shared PHP file)
+**Total:** 69 files (67 shell scripts, 1 PHP script, 1 shared PHP file)

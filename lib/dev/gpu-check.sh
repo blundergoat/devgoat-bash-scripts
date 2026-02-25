@@ -31,7 +31,6 @@ GPU_DOCKER_DIR="${GPU_DOCKER_DIR:-docker/gpu}"
 # --- Colours and icons ---
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 DIM='\033[2m'
 BOLD='\033[1m'
@@ -39,7 +38,6 @@ RESET='\033[0m'
 
 PASS="${GREEN}✔${RESET}"
 FAIL="${RED}✘${RESET}"
-WARN="${YELLOW}●${RESET}"
 ARROW="${BLUE}→${RESET}"
 
 echo ""

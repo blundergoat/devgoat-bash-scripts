@@ -6,7 +6,7 @@
 #
 # PURPOSE:
 # Generates a code map for a given path pattern.
-# Default: Simple tree structure
+# Default: Annotated tree structure (`path/ = description`)
 # With options: Deep code analysis with file contents
 #
 # USAGE:
@@ -44,69 +44,9 @@ SHOW_LINE_NUMBERS=true
 OUTPUT_FILE=""
 EXCLUDE_PATTERNS=()
 PATH_PATTERN=""
-PYTHON_BIN=""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-
-if command -v python3 >/dev/null 2>&1; then
-    PYTHON_BIN="python3"
-elif command -v python >/dev/null 2>&1; then
-    PYTHON_BIN="python"
-fi
-
-if [ -n "$PYTHON_BIN" ]; then
-    if ! "$PYTHON_BIN" -c "import sys" >/dev/null 2>&1; then
-        PYTHON_BIN=""
-    fi
-fi
-
-PYTHON_TREE_SCRIPT=$(cat <<'PY'
-import sys
-
-pattern = sys.argv[1]
-paths = [line.rstrip("\n") for line in sys.stdin if line.rstrip("\n")]
-
-if not paths:
-    print(f"Scope: {pattern}")
-    print("(no files)")
-    sys.exit(0)
-
-class Node:
-    __slots__ = ("children", "is_file")
-    def __init__(self):
-        self.children = {}
-        self.is_file = False
-
-root = Node()
-for path in sorted(paths):
-    parts = [part for part in path.split("/") if part]
-    node = root
-    for index, part in enumerate(parts):
-        child = node.children.get(part)
-        if child is None:
-            child = Node()
-            node.children[part] = child
-        node = child
-        if index == len(parts) - 1:
-            node.is_file = True
-
-def render(node, prefix=""):
-    names = sorted(node.children)
-    for idx, name in enumerate(names):
-        child = node.children[name]
-        last = idx == len(names) - 1
-        connector = "`-- " if last else "|-- "
-        label = name + ("/" if child.children and not child.is_file else "")
-        print(prefix + connector + label)
-        if child.children:
-            extension = "    " if last else "|   "
-            render(child, prefix + extension)
-
-print(f"Scope: {pattern}")
-render(root)
-PY
-)
 
 contains_glob() {
     [[ "$1" == *\** || "$1" == *\?* || "$1" == *\[* ]]
@@ -142,107 +82,273 @@ list_matching_files() {
     done
 }
 
-render_tree_from_list() {
-    local pattern="$1"
+annotation_for_path() {
+    local rel_path="$1"
+    local is_dir="$2"
+    local name="${rel_path##*/}"
+    local annotation=""
 
-    if [ -n "$PYTHON_BIN" ]; then
-        "$PYTHON_BIN" -c "$PYTHON_TREE_SCRIPT" "$pattern"
+    case "$rel_path" in
+        ai-cli) annotation="CLI installer/uninstaller scripts for coding assistants" ;;
+        assets) annotation="scss, javascript, typescript" ;;
+        aws) annotation="AWS automation and deployment helper scripts" ;;
+        bin) annotation="doctrine and database scripts, base data sql" ;;
+        codegen) annotation="code generation utilities" ;;
+        config) annotation="yaml config for packages, site params, routing, services" ;;
+        dev) annotation="local development workflow scripts" ;;
+        docs) annotation="most important docs specific to this project (guidelines, overviews, processes)" ;;
+        maintenance) annotation="repo maintenance and housekeeping scripts" ;;
+        migrations) annotation="database migrations" ;;
+        public/apps) annotation="telehealth apps for sites without CDN (often a webroot symlink target)" ;;
+        public/build) annotation="compiled css/js assets uploaded to CDN" ;;
+        public/bundles) annotation="composer package asset files uploaded to CDN" ;;
+        public/static) annotation="static assets for localdev or CDN" ;;
+        setup) annotation="tool installation and environment bootstrap scripts" ;;
+        src) annotation="main project source files" ;;
+        stacks) annotation="language-specific project setup and quality gates" ;;
+        stacks/go) annotation="Go stack scripts" ;;
+        stacks/node) annotation="Node.js stack scripts" ;;
+        stacks/php) annotation="PHP stack scripts" ;;
+        stacks/python) annotation="Python stack scripts" ;;
+        templates) annotation="template/view files (twig, blade, etc.)" ;;
+        tests) annotation="unit/integration test suites" ;;
+        var) annotation="runtime logs and cache" ;;
+        vendor) annotation="third-party dependencies" ;;
+        lib) annotation="reusable shell scripts organized by domain" ;;
+    esac
+    if [ -n "$annotation" ]; then
+        echo "$annotation"
+        return 0
+    fi
+
+    case "$name" in
+        index.php|index_dev.php|index_prod.php|index_local.php)
+            echo "webroot entrypoint selected by environment"
+            return 0
+            ;;
+    esac
+
+    if [[ "$is_dir" == "true" ]]; then
+        case "$name" in
+            docs) annotation="project documentation" ;;
+            config) annotation="application configuration" ;;
+            migrations) annotation="database schema changes" ;;
+            templates) annotation="template files" ;;
+            tests) annotation="automated tests" ;;
+            vendor) annotation="third-party dependencies" ;;
+            src) annotation="application source code" ;;
+        esac
+    fi
+
+    if [ -n "$annotation" ]; then
+        echo "$annotation"
+    fi
+}
+
+render_tree_from_list() {
+    local root_label="$1"
+    local paths=()
+    declare -A explicit_dirs
+    local line
+    while IFS= read -r line; do
+        local is_explicit_dir="false"
+        if [[ "$line" == */ ]]; then
+            is_explicit_dir="true"
+        fi
+        line="${line#./}"
+        line="${line%/}"
+        [ -z "$line" ] && continue
+        paths+=("$line")
+        if [[ "$is_explicit_dir" == "true" ]]; then
+            explicit_dirs["$line"]=1
+        fi
+    done
+
+    if [ -n "$root_label" ]; then
+        echo "$root_label"
+    fi
+
+    if [ ${#paths[@]} -eq 0 ]; then
+        echo "(no files)"
+        return 0
+    fi
+
+    declare -A children_map
+    declare -A seen_child
+    declare -A has_children
+    local ROOT_KEY="__ROOT__"
+
+    local path parent current total part node_key i
+    for path in "${paths[@]}"; do
+        IFS='/' read -r -a parts <<< "$path"
+        parent="$ROOT_KEY"
+        current=""
+        total=${#parts[@]}
+        for ((i=0; i<total; i++)); do
+            part="${parts[i]}"
+            current="${current:+$current/}$part"
+            node_key="${parent}|${part}"
+            if [[ -z "${seen_child[$node_key]+x}" ]]; then
+                children_map["$parent"]+="${part}"$'\n'
+                seen_child["$node_key"]=1
+            fi
+            if (( i < total - 1 )); then
+                has_children["$current"]=1
+            fi
+            parent="$current"
+        done
+    done
+
+    print_branch() {
+        local parent_key="$1"
+        local prefix="$2"
+        local child_list="${children_map[$parent_key]-}"
+        [ -z "$child_list" ] && return 0
+
+        local children=()
+        mapfile -t children < <(printf '%s' "$child_list" | sed '/^$/d' | sort)
+
+        local idx child child_path connector next_prefix is_dir display_name annotation
+        for ((idx=0; idx<${#children[@]}; idx++)); do
+            child="${children[idx]}"
+            if [ $idx -eq $(( ${#children[@]} - 1 )) ]; then
+                connector="└── "
+                next_prefix="${prefix}    "
+            else
+                connector="├── "
+                next_prefix="${prefix}│   "
+            fi
+
+            if [ "$parent_key" = "$ROOT_KEY" ]; then
+                child_path="$child"
+            else
+                child_path="$parent_key/$child"
+            fi
+
+            is_dir="false"
+            if [[ -n "${has_children[$child_path]+x}" ]] || [[ -n "${explicit_dirs[$child_path]+x}" ]]; then
+                is_dir="true"
+            fi
+
+            display_name="$child"
+            if [[ "$is_dir" == "true" ]]; then
+                display_name="${display_name}/"
+            fi
+
+            annotation=$(annotation_for_path "$child_path" "$is_dir")
+            if [ -n "$annotation" ]; then
+                printf '%s%s%-20s = %s\n' "$prefix" "$connector" "$display_name" "$annotation"
+            else
+                printf '%s%s%s\n' "$prefix" "$connector" "$display_name"
+            fi
+
+            if [[ "$is_dir" == "true" ]]; then
+                print_branch "$child_path" "$next_prefix"
+            fi
+        done
+    }
+
+    print_branch "$ROOT_KEY" ""
+}
+
+render_tree_for_pattern() {
+    local pattern="$1"
+    local directories_only="${2:-false}"
+    local clean_path="${pattern%/}"
+    if [ -z "$clean_path" ]; then
+        clean_path="."
+    fi
+
+    local has_glob=false
+    if contains_glob "$clean_path"; then
+        has_glob=true
+    fi
+
+    if [ "$has_glob" = false ] && [ ! -e "$clean_path" ]; then
+        error "Path does not exist: $clean_path"
+    fi
+
+    local matched_files=()
+    mapfile -t matched_files < <(list_matching_files "$pattern")
+    if [ ${#matched_files[@]} -eq 0 ]; then
+        echo "No files found"
+        return 0
+    fi
+
+    if [ "$has_glob" = false ] && [ -f "$clean_path" ]; then
+        local single_file="${clean_path##*/}"
+        local single_annotation
+        single_annotation=$(annotation_for_path "$clean_path" "false")
+        if [ -n "$single_annotation" ]; then
+            printf '%s = %s\n' "$single_file" "$single_annotation"
+        else
+            echo "$single_file"
+        fi
+        return 0
+    fi
+
+    local root_label
+    if [ "$has_glob" = true ]; then
+        root_label="Scope: $pattern"
+    elif [ "$clean_path" = "." ]; then
+        root_label="$(basename "$REPO_ROOT")/"
     else
-        echo "Scope: $pattern"
-        local paths=()
-        while IFS= read -r line; do
-            [ -z "$line" ] && continue
-            paths+=("$line")
+        local resolved_root
+        resolved_root="$(cd "$clean_path" && pwd)"
+        root_label="$(basename "$resolved_root")/"
+    fi
+
+    local display_files=()
+    local file
+    if [ "$has_glob" = false ] && [ "$clean_path" != "." ]; then
+        for file in "${matched_files[@]}"; do
+            if [[ "$file" == "$clean_path/"* ]]; then
+                display_files+=("${file#"$clean_path"/}")
+            elif [[ "$file" == "$clean_path" ]]; then
+                display_files+=("${file##*/}")
+            fi
+        done
+    else
+        display_files=("${matched_files[@]}")
+    fi
+
+    if [ "$directories_only" = true ]; then
+        declare -A dir_map
+        local entry dir
+        for entry in "${display_files[@]}"; do
+            entry="${entry#./}"
+            entry="${entry%/}"
+            [ -z "$entry" ] && continue
+
+            if [[ "$entry" == */* ]]; then
+                dir="${entry%/*}"
+            else
+                continue
+            fi
+
+            while [ -n "$dir" ] && [ "$dir" != "." ]; do
+                dir_map["$dir"]=1
+                if [[ "$dir" == */* ]]; then
+                    dir="${dir%/*}"
+                else
+                    break
+                fi
+            done
         done
 
-        if [ ${#paths[@]} -eq 0 ]; then
-            echo "(no files)"
+        display_files=()
+        local map_dir
+        for map_dir in "${!dir_map[@]}"; do
+            display_files+=("${map_dir}/")
+        done
+
+        if [ ${#display_files[@]} -eq 0 ]; then
+            echo "No directories found"
             return 0
         fi
-
-        declare -A children_map
-        declare -A last_added
-        declare -A has_children
-        local ROOT_KEY="__ROOT__"
-
-        local path parts parent current total name key
-
-        for path in "${paths[@]}"; do
-            IFS='/' read -r -a parts <<< "$path"
-            parent="$ROOT_KEY"
-            current=""
-            total=${#parts[@]}
-            for ((i=0; i<total; i++)); do
-                name="${parts[i]}"
-                current="${current:+$current/}$name"
-                key="$parent"
-                if [[ "${last_added[$key]-}" != "$name" ]]; then
-                    children_map[$key]+="${name}"$'\n'
-                    last_added[$key]="$name"
-                fi
-                if (( i < total - 1 )); then
-                    has_children[$current]=1
-                fi
-                parent="$current"
-            done
-        done
-
-        print_branch() {
-            local parent_key="$1"
-            local prefix="$2"
-
-            local child_list="${children_map[$parent_key]-}"
-            [ -z "$child_list" ] && return 0
-
-            local children=()
-            while IFS= read -r child; do
-                [ -z "$child" ] && continue
-                children+=("$child")
-            done <<< "$child_list"
-
-            local count=${#children[@]}
-            local idx child child_path connector next_prefix suffix
-
-            for ((idx=0; idx<count; idx++)); do
-                child="${children[idx]}"
-                local is_last=0
-                if [ $idx -eq $((count - 1)) ]; then
-                    is_last=1
-                fi
-
-                if [ "$parent_key" = "$ROOT_KEY" ]; then
-                    connector=$'|-- '
-                    if [ $is_last -eq 1 ]; then
-                        next_prefix="${prefix}    "
-                    else
-                        next_prefix="${prefix}|   "
-                    fi
-                elif [ $is_last -eq 1 ]; then
-                    connector=$'`-- '
-                    next_prefix="${prefix}    "
-                else
-                    connector=$'|-- '
-                    next_prefix="${prefix}|   "
-                fi
-
-                if [ "$parent_key" = "$ROOT_KEY" ]; then
-                    child_path="$child"
-                else
-                    child_path="$parent_key/$child"
-                fi
-
-                suffix=""
-                if [[ -n "${has_children[$child_path]+x}" ]]; then
-                    suffix="/"
-                fi
-
-                printf '%s%s%s%s\n' "$prefix" "$connector" "$child" "$suffix"
-                print_branch "$child_path" "$next_prefix"
-            done
-        }
-
-        print_branch "$ROOT_KEY" ""
     fi
+
+    printf '%s\n' "${display_files[@]}" | sort | render_tree_from_list "$root_label"
 }
 
 # ============================================================================
@@ -314,40 +420,7 @@ PATH_PATTERN="${PATH_PATTERN:-.}"
 
 generate_tree() {
     cd "$REPO_ROOT"
-
-    local pattern="$PATH_PATTERN"
-    local clean_path="${pattern%/}"
-    if [ -z "$clean_path" ]; then
-        clean_path="."
-    fi
-
-    local has_glob=false
-    if contains_glob "$clean_path"; then
-        has_glob=true
-    fi
-
-    if [ "$has_glob" = false ] && [ ! -e "$clean_path" ]; then
-        error "Path does not exist: $clean_path"
-    fi
-
-    if command -v tree >/dev/null 2>&1 && [ "$has_glob" = false ]; then
-        local tree_args=("-I" ".git")
-        if tree --help 2>&1 | grep -q -- '--gitignore'; then
-            tree_args+=("--gitignore")
-        fi
-        tree "${tree_args[@]}" "$clean_path"
-        return 0
-    fi
-
-    local matched_files=()
-    mapfile -t matched_files < <(list_matching_files "$pattern")
-
-    if [ ${#matched_files[@]} -eq 0 ]; then
-        echo "No files found"
-        return 0
-    fi
-
-    printf '%s\n' "${matched_files[@]}" | sort | render_tree_from_list "$pattern"
+    render_tree_for_pattern "$PATH_PATTERN" "true"
 }
 
 generate_deep_map() {
@@ -376,7 +449,7 @@ generate_deep_map() {
     echo "─────────────────────────────────────────────────────────────────────────────"
     echo ""
 
-    printf '%s\n' "${all_files[@]}" | sort | render_tree_from_list "$PATH_PATTERN"
+    render_tree_for_pattern "$PATH_PATTERN"
 
     echo ""
     echo "─────────────────────────────────────────────────────────────────────────────"
@@ -421,7 +494,7 @@ generate_deep_map() {
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo ""
 
-        if [ $MAX_LINES -gt 0 ]; then
+        if [ "$MAX_LINES" -gt 0 ]; then
             if [ "$SHOW_LINE_NUMBERS" = true ]; then
                 head -n "$MAX_LINES" "$filepath" | cat -n
             else

@@ -71,6 +71,7 @@ NC='\033[0m'
 # Load .env file if it exists
 if [[ -f "$ENV_FILE" ]]; then
     set -a
+    # shellcheck source=/dev/null
     source <(grep -v '^\s*#' "$ENV_FILE" | grep -v '^\s*$')
     set +a
 fi
