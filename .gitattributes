@@ -1,0 +1,7 @@
+# Force LF line endings for all text files in the repo.
+# Prevents CRLF breakage on WSL / Windows checkouts.
+* text=auto eol=lf
+
+# Be explicit about shell scripts — these must never have CRLF.
+*.sh text eol=lf
+*.bash text eol=lf
