@@ -63,9 +63,9 @@ CHECKS_WARNED=0
 
 # Helpers
 info()      { echo -e "${BLUE}[INFO]${NC} $*"; }
-success()   { echo -e "${GREEN}[OK]${NC} $*"; ((CHECKS_PASSED++)); }
-warn()      { echo -e "${YELLOW}[WARN]${NC} $*"; ((CHECKS_WARNED++)); }
-error()     { echo -e "${RED}[ERROR]${NC} $*"; ((CHECKS_FAILED++)); }
+success()   { echo -e "${GREEN}[OK]${NC} $*"; CHECKS_PASSED=$((CHECKS_PASSED + 1)); }
+warn()      { echo -e "${YELLOW}[WARN]${NC} $*"; CHECKS_WARNED=$((CHECKS_WARNED + 1)); }
+error()     { echo -e "${RED}[ERROR]${NC} $*"; CHECKS_FAILED=$((CHECKS_FAILED + 1)); }
 header()    { echo -e "\n${BOLD}${BLUE}--- $* ---${NC}"; }
 subheader() { echo -e "\n${CYAN}> $*${NC}"; }
 

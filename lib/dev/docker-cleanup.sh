@@ -111,7 +111,7 @@ else
         docker ps -a --filter status=exited --format "    {{.Names}} ({{.Image}}, {{.Status}})" 2>/dev/null
     else
         prune_output=$(docker container prune -f 2>&1)
-        reclaimed=$(echo "$prune_output" | grep -oP 'reclaimed approximately \K[0-9.]+[A-Za-z]+' || echo "0B")
+        reclaimed=$(echo "$prune_output" | sed -n 's/.*reclaimed approximately \([0-9.]*[A-Za-z]*\).*/\1/p' || echo "0B")
         echo -e "  ${PASS} Removed ${stopped_count} container(s) ${DIM}(${reclaimed})${RESET}"
     fi
 fi
@@ -142,7 +142,7 @@ else
         fi
     else
         prune_output=$(docker image prune "${image_args[@]}" -f 2>&1)
-        reclaimed=$(echo "$prune_output" | grep -oP 'reclaimed approximately \K[0-9.]+[A-Za-z]+' || echo "0B")
+        reclaimed=$(echo "$prune_output" | sed -n 's/.*reclaimed approximately \([0-9.]*[A-Za-z]*\).*/\1/p' || echo "0B")
         echo -e "  ${PASS} Cleaned images ${DIM}(${reclaimed})${RESET}"
     fi
 fi
@@ -163,7 +163,7 @@ else
         docker volume ls -f dangling=true --format "    {{.Name}}" 2>/dev/null | head -10
     else
         prune_output=$(docker volume prune -f 2>&1)
-        reclaimed=$(echo "$prune_output" | grep -oP 'reclaimed approximately \K[0-9.]+[A-Za-z]+' || echo "0B")
+        reclaimed=$(echo "$prune_output" | sed -n 's/.*reclaimed approximately \([0-9.]*[A-Za-z]*\).*/\1/p' || echo "0B")
         echo -e "  ${PASS} Removed ${volume_count} volume(s) ${DIM}(${reclaimed})${RESET}"
     fi
 fi

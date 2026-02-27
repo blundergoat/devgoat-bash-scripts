@@ -32,10 +32,13 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="$PROJECT_ROOT/.env"
 
 if [[ -f "$ENV_FILE" ]]; then
-    set -a
-    # shellcheck source=/dev/null
-    source <(grep -v '^\s*#' "$ENV_FILE" | grep -v '^\s*$')
-    set +a
+    while IFS='=' read -r key value; do
+        [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
+        key="${key#"${key%%[![:space:]]*}"}"
+        value="${value%\"}" ; value="${value#\"}"
+        value="${value%\'}" ; value="${value#\'}"
+        export "$key=$value"
+    done < "$ENV_FILE"
 fi
 
 # Colors

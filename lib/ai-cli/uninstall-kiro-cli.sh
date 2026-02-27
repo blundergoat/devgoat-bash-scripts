@@ -75,7 +75,11 @@ BASHRC="$HOME/.bashrc"
 if [[ -f "$BASHRC" ]]; then
     # Remove the "# Kiro CLI" comment and the PATH export line added by the installer
     if grep -q '# Kiro CLI' "$BASHRC" 2>/dev/null; then
-        sed -i '/^# Kiro CLI$/d' "$BASHRC"
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i "" '/^# Kiro CLI$/d' "$BASHRC"
+        else
+            sed -i '/^# Kiro CLI$/d' "$BASHRC"
+        fi
         echo -e "${GREEN}Removed Kiro CLI comment from ${BASHRC}${NC}"
     fi
     # Note: we don't remove the .local/bin PATH line since other tools may use it

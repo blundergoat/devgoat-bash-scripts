@@ -154,7 +154,7 @@ echo ""
 REQUIRED_FAILURES=0
 for secret in "${REQUIRED_SECRETS[@]}"; do
     if ! check_secret "${secret}" "true"; then
-        ((REQUIRED_FAILURES++))
+        REQUIRED_FAILURES=$((REQUIRED_FAILURES + 1))
     fi
 done
 

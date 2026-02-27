@@ -14,3 +14,9 @@ node_modules/
 __pycache__/
 *.pyc
 .venv/
+.claude/plans/
+.claude/memory/
+*.bak
+.terraform/
+*.tfstate*
+.env.production

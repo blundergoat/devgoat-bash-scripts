@@ -1,17 +1,16 @@
 # Code Map
 
-Repository tree with annotations. All scripts live under `lib/`.
+Repository tree with annotations. Most scripts live under `lib/`; `preflight-checks.sh` lives at the repo root.
 
 ```
 lib/
-├── ai-cli/                          # AI coding assistant installers/uninstallers (17 scripts)
+├── ai-cli/                          # AI coding assistant installers/uninstallers (15 scripts)
 │   ├── _common.sh                   # Shared library: platform detection, npm helpers, WSL sanitization
 │   ├── install-claude.sh            # Claude Code installer
 │   ├── install-codex.sh             # OpenAI Codex installer
 │   ├── install-cursor-agent.sh      # Cursor Agent installer
 │   ├── install-gemini-cli.sh        # Gemini CLI installer
 │   ├── install-github-copilot.sh    # GitHub Copilot CLI installer
-│   ├── install-grok.sh             # Grok CLI installer
 │   ├── install-kilo.sh             # Kilo Code installer
 │   ├── install-kiro-cli.sh         # Kiro CLI installer
 │   ├── uninstall-claude.sh
@@ -19,7 +18,6 @@ lib/
 │   ├── uninstall-cursor-agent.sh
 │   ├── uninstall-gemini-cli.sh
 │   ├── uninstall-github-copilot.sh
-│   ├── uninstall-grok.sh
 │   ├── uninstall-kilo.sh
 │   └── uninstall-kiro-cli.sh
 │
@@ -46,13 +44,13 @@ lib/
 │   ├── dev-logs.sh                  # Tail and aggregate dev logs (template)
 │   ├── docker-cleanup.sh            # Prune unused Docker resources (drop-in)
 │   ├── docker-logs.sh               # Tail Docker Compose service logs (template)
-│   ├── gpu-check.sh                 # Detect GPU — NVIDIA/Apple Silicon (drop-in, omits -e)
+│   ├── gpu-check.sh                 # Detect GPU — NVIDIA (drop-in, omits -e)
 │   ├── health-check-localdev.sh     # Verify local services (template, omits -e)
 │   ├── health-check-remote.sh       # Check remote AWS health (template)
 │   ├── port-check.sh                # Check port listeners, show PID/process (drop-in)
 │   └── start-dev.sh                 # Start local dev environment (template, omits -e)
 │
-├── maintenance/                     # Repo housekeeping (6 scripts, all drop-in)
+├── maintenance/                     # Repo housekeeping (7 scripts, all drop-in)
 │   ├── git-cleanup.sh               # Delete merged local branches
 │   ├── lint-all.sh                  # Run bash -n + shellcheck on all scripts (omits -e)
 │   ├── make-scripts-executable.sh   # chmod +x all .sh files
@@ -61,7 +59,9 @@ lib/
 │   ├── update-all.sh                # git pull --rebase + restore executable bits
 │   └── verify-checksums.sh          # Verify file integrity via SHA-256 manifest
 │
-├── setup/                           # Tool installation (3 scripts)
+├── setup/                           # Tool installation (5 scripts)
+│   ├── install-bats-core.sh         # Install bats-core test framework (drop-in)
+│   ├── install-bats.sh              # Compatibility shim → install-bats-core.sh (deprecated)
 │   ├── install-ollama.sh            # Install Ollama for local LLM inference
 │   ├── sync-env.sh                  # Copy .env.example → .env where missing (template)
 │   └── uninstall-ollama.sh          # Uninstall Ollama
@@ -94,4 +94,6 @@ lib/
         └── verify.sh                # Verify Python tools installed (omits -e)
 ```
 
-**Total:** 69 files (67 shell scripts, 1 PHP script, 1 shared PHP file)
+**Root:** `preflight-checks.sh` — project-wide validation entry point (repo root, not under `lib/`)
+
+**Total:** 68 files (66 shell scripts + 1 PHP script + 1 root preflight script)

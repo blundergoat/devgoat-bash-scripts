@@ -47,7 +47,7 @@ echo ""
 
 # 1. Composer validate
 step "Composer validate"
-t=$(date +%s%N)
+t=$(_goat_now)
 if composer validate --strict 2>&1 | grep -q "is valid"; then
     pass "$(elapsed_since "$t")"
 else
@@ -56,7 +56,7 @@ fi
 
 # 2. Security audit
 step "Security audit"
-t=$(date +%s%N)
+t=$(_goat_now)
 audit_output=$(composer audit 2>&1)
 audit_exit=$?
 if [[ $audit_exit -eq 0 ]]; then
@@ -71,7 +71,7 @@ fi
 
 # 3. Code style (PHP-CS-Fixer)
 step "Code style (PHP-CS-Fixer)"
-t=$(date +%s%N)
+t=$(_goat_now)
 if [[ -x vendor/bin/php-cs-fixer ]]; then
     cs_output=$(vendor/bin/php-cs-fixer fix --dry-run --diff 2>&1)
     cs_exit=$?
@@ -87,7 +87,7 @@ fi
 
 # 4. Cyclomatic complexity
 step "Cyclomatic complexity (max ${MAX_COMPLEXITY})"
-t=$(date +%s%N)
+t=$(_goat_now)
 complexity_script="$PROJECT_ROOT/${COMPLEXITY_SCRIPT}"
 if [[ -f "$complexity_script" ]]; then
     complexity_output=$(php "$complexity_script" --path="${SRC_DIR}" --max="${MAX_COMPLEXITY}" 2>&1)
@@ -107,7 +107,7 @@ fi
 
 # 5. Mess detector (PHPMD)
 step "Mess detector (PHPMD)"
-t=$(date +%s%N)
+t=$(_goat_now)
 if [[ -x vendor/bin/phpmd ]]; then
     if [[ -f phpmd.xml ]]; then
         phpmd_output=$(vendor/bin/phpmd "${SRC_DIR}" text phpmd.xml 2>&1)
@@ -130,7 +130,7 @@ fi
 
 # 6. PHPStan
 step "Static analysis (PHPStan L10)"
-t=$(date +%s%N)
+t=$(_goat_now)
 if [[ -x vendor/bin/phpstan ]]; then
     if [[ -f phpstan.neon || -f phpstan.neon.dist ]]; then
         stan_output=$(vendor/bin/phpstan analyse --no-progress --error-format=raw 2>&1)
@@ -153,7 +153,7 @@ fi
 
 # 7. Twig lint
 step "Twig templates lint"
-t=$(date +%s%N)
+t=$(_goat_now)
 if [[ -d "${TEMPLATES_DIR}" ]]; then
     twig_errors=0
     for f in "${TEMPLATES_DIR}"/*.html.twig; do
@@ -177,7 +177,7 @@ fi
 
 # 8. Docker Compose validate
 step "Docker Compose config"
-t=$(date +%s%N)
+t=$(_goat_now)
 compose_file="$PROJECT_ROOT/${COMPOSE_FILE_NAME}"
 if [[ -f "$compose_file" ]] && command -v docker &>/dev/null; then
     compose_output=$(docker compose -f "$compose_file" config --quiet 2>&1)
@@ -199,7 +199,7 @@ fi
 
 # 9. PHPUnit
 step "Tests (PHPUnit)"
-t=$(date +%s%N)
+t=$(_goat_now)
 if [[ ! -x vendor/bin/phpunit ]]; then
     skip "phpunit not installed"
 elif [[ ! -f phpunit.xml && ! -f phpunit.xml.dist ]]; then
@@ -224,7 +224,7 @@ fi
 
 # 10. Coverage
 step "Coverage (PHPUnit)"
-t=$(date +%s%N)
+t=$(_goat_now)
 if [[ ! -f phpunit.xml && ! -f phpunit.xml.dist ]]; then
     skip "no phpunit.xml config"
 elif ! php -m 2>/dev/null | grep -qi "xdebug\|pcov"; then
@@ -276,7 +276,7 @@ fi
 # 11. Mutation testing (optional)
 if [[ "$RUN_MUTATE" == true ]]; then
     step "Mutation testing (Infection)"
-    t=$(date +%s%N)
+    t=$(_goat_now)
     if [[ ! -x vendor/bin/infection ]]; then
         fail "Mutation testing (infection not installed)"
     elif ! php -m 2>/dev/null | grep -qi "xdebug\|pcov"; then

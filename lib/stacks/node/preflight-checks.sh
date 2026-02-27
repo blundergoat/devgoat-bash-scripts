@@ -42,7 +42,7 @@ echo ""
 
 # 1. ESLint
 step "Lint (eslint)"
-t=$(date +%s%N)
+t=$(_goat_now)
 if [[ -x "$NODE_APP_DIR/node_modules/.bin/eslint" ]]; then
     lint_output=$("$NODE_APP_DIR/node_modules/.bin/eslint" "$NODE_APP_DIR" --max-warnings 0 2>&1)
     lint_exit=$?
@@ -72,7 +72,7 @@ fi
 
 # 2. TypeScript type check
 step "Type check (tsc)"
-t=$(date +%s%N)
+t=$(_goat_now)
 if [[ -x "$NODE_APP_DIR/node_modules/.bin/tsc" && -f "$NODE_APP_DIR/tsconfig.json" ]]; then
     tsc_output=$("$NODE_APP_DIR/node_modules/.bin/tsc" --noEmit --project "$NODE_APP_DIR/tsconfig.json" 2>&1)
     tsc_exit=$?
@@ -99,7 +99,7 @@ fi
 
 # 3. Tests
 step "Tests"
-t=$(date +%s%N)
+t=$(_goat_now)
 if [[ -x "$NODE_APP_DIR/node_modules/.bin/jest" ]]; then
     test_output=$("$NODE_APP_DIR/node_modules/.bin/jest" --ci --passWithNoTests 2>&1)
     test_exit=$?
@@ -137,7 +137,7 @@ fi
 
 # 4. Docker Compose validate
 step "Docker Compose config"
-t=$(date +%s%N)
+t=$(_goat_now)
 compose_file="$PROJECT_ROOT/${COMPOSE_FILE_NAME}"
 if [[ -f "$compose_file" ]] && command -v docker &>/dev/null; then
     compose_output=$(docker compose -f "$compose_file" config --quiet 2>&1)

@@ -65,7 +65,6 @@ Installers and uninstallers for AI coding assistants. All scripts handle platfor
 | `install-cursor-agent.sh` / `uninstall-cursor-agent.sh` | [Cursor Agent](https://cursor.com) |
 | `install-gemini-cli.sh` / `uninstall-gemini-cli.sh` | [Gemini CLI](https://github.com/google/gemini-cli) |
 | `install-github-copilot.sh` / `uninstall-github-copilot.sh` | [GitHub Copilot CLI](https://github.com/github/copilot) |
-| `install-grok.sh` / `uninstall-grok.sh` | [Grok CLI](https://github.com/vibe-kit/grok-cli) |
 | `install-kilo.sh` / `uninstall-kilo.sh` | [Kilo Code](https://kilocode.ai) |
 | `install-kiro-cli.sh` / `uninstall-kiro-cli.sh` | [Kiro CLI](https://kiro.dev) |
 
@@ -108,7 +107,11 @@ Local development workflow scripts.
 | `health-check-localdev.sh` | Verify local services are running correctly |
 | `health-check-remote.sh` | Check remote AWS infrastructure health |
 | `api-load-test.sh` | Simple HTTP load testing with `curl` |
-| `gpu-check.sh` | Detect GPU availability (NVIDIA/Apple Silicon) |
+| `gpu-check.sh` | Detect GPU availability (NVIDIA) |
+| `docker-cleanup.sh` | Prune unused Docker resources |
+| `docker-logs.sh` | Tail Docker Compose service logs |
+| `db-reset.sh` | Drop/create/migrate/seed database |
+| `port-check.sh` | Check port listeners, show PID/process |
 
 ### maintenance
 
@@ -116,16 +119,23 @@ Repository housekeeping tools.
 
 | Script | Purpose | Type |
 |---|---|---|
-| `make-scripts-executable.sh` | `chmod +x` all `.sh` files in `scripts/` | Drop-in |
+| `git-cleanup.sh` | Delete merged local branches | Drop-in |
+| `lint-all.sh` | Run `bash -n` + `shellcheck` on all scripts | Drop-in |
+| `make-scripts-executable.sh` | `chmod +x` all `.sh` files | Drop-in |
 | `remove-zone-identifier.sh` | Remove Windows Zone.Identifier ADS files | Drop-in |
+| `scan-secrets.sh` | Scan for accidentally committed secrets | Drop-in |
+| `update-all.sh` | `git pull --rebase` + restore executable bits | Drop-in |
+| `verify-checksums.sh` | Verify file integrity via SHA-256 manifest | Drop-in |
 
 ### setup
 
-Ollama local LLM runner management.
+Tool installation scripts.
 
 | Script | Purpose |
 |---|---|
+| `install-bats-core.sh` | Install bats-core test framework |
 | `install-ollama.sh` | Install Ollama for local LLM inference |
+| `sync-env.sh` | Copy `.env.example` to `.env` where missing |
 | `uninstall-ollama.sh` | Uninstall Ollama |
 
 ### stacks

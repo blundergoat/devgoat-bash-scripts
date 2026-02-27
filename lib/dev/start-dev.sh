@@ -171,13 +171,27 @@ if command -v lsof &>/dev/null; then
     for port in "$AGENT_PORT" "$APP_PORT" "$MERCURE_PORT"; do
         stale_pids=$(lsof -ti :"$port" 2>/dev/null || true)
         if [[ -n "$stale_pids" ]]; then
-            echo -e "  ${YELLOW}${BOLD}Port ${port} in use${RESET} ${DIM}- killing stale process(es)${RESET}"
-            echo "$stale_pids" | xargs kill 2>/dev/null || true
+            # Show what we're about to kill
+            echo -e "  ${YELLOW}${BOLD}Port ${port} in use:${RESET}"
+            while IFS= read -r pid; do
+                proc_name=$(ps -p "$pid" -o comm= 2>/dev/null || echo "unknown")
+                proc_user=$(ps -p "$pid" -o user= 2>/dev/null || echo "unknown")
+                echo -e "    ${DIM}PID ${pid} (${proc_name}, user: ${proc_user})${RESET}"
+                # Only kill processes owned by the current user
+                if [[ "$proc_user" == "$(whoami)" ]]; then
+                    kill "$pid" 2>/dev/null || true
+                else
+                    echo -e "    ${YELLOW}Skipped — owned by ${proc_user}, not current user${RESET}"
+                fi
+            done <<< "$stale_pids"
             sleep 1
-            # Force kill if still alive
+            # Force kill remaining user-owned processes
             remaining=$(lsof -ti :"$port" 2>/dev/null || true)
             if [[ -n "$remaining" ]]; then
-                echo "$remaining" | xargs kill -9 2>/dev/null || true
+                while IFS= read -r pid; do
+                    proc_user=$(ps -p "$pid" -o user= 2>/dev/null || echo "unknown")
+                    [[ "$proc_user" == "$(whoami)" ]] && kill -9 "$pid" 2>/dev/null || true
+                done <<< "$remaining"
                 sleep 1
             fi
         fi
@@ -496,7 +510,11 @@ if [[ -f "$REPO_ROOT/.env" ]]; then
     CURRENT_ENDPOINT=$(grep -E '^AGENT_ENDPOINT=' "$REPO_ROOT/.env" 2>/dev/null | head -1 | cut -d= -f2-)
     if [[ "$CURRENT_ENDPOINT" != "$EXPECTED_ENDPOINT" ]]; then
         echo -e "  ${YELLOW}${BOLD}Fixing${RESET} AGENT_ENDPOINT in .env -> ${DIM}${EXPECTED_ENDPOINT}${RESET}"
-        sed -i "s|^AGENT_ENDPOINT=.*|AGENT_ENDPOINT=${EXPECTED_ENDPOINT}|" "$REPO_ROOT/.env"
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i "" "s|^AGENT_ENDPOINT=.*|AGENT_ENDPOINT=${EXPECTED_ENDPOINT}|" "$REPO_ROOT/.env"
+        else
+            sed -i "s|^AGENT_ENDPOINT=.*|AGENT_ENDPOINT=${EXPECTED_ENDPOINT}|" "$REPO_ROOT/.env"
+        fi
     fi
 fi
 

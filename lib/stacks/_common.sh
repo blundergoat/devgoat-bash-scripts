@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+e out #!/usr/bin/env bash
 # =============================================================================
 # Stacks Common Bootstrap
 # =============================================================================
@@ -46,19 +46,43 @@ FAILED=0
 ERRORS=0
 WARNINGS=0
 FAILURES=()
-START_TIME=$(date +%s%N 2>/dev/null || date +%s)
+
+# Detect nanosecond support (GNU date has %N, BSD/macOS does not)
+if date +%s%N 2>/dev/null | grep -q 'N'; then
+    _GOAT_TIME_NS=false
+else
+    _GOAT_TIME_NS=true
+fi
+
+_goat_now() {
+    if [[ "$_GOAT_TIME_NS" == true ]]; then
+        date +%s%N
+    else
+        date +%s
+    fi
+}
+
+START_TIME=$(_goat_now)
 
 # ── PROJECT_ROOT detection ───────────────────────────────────────
 if [[ -z "${PROJECT_ROOT:-}" ]]; then
     PROJECT_ROOT="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fi
 
-# ── .env loader ──────────────────────────────────────────────────
+# ── .env loader (safe key=value parsing, no shell execution) ─────
 if [[ -f "$PROJECT_ROOT/.env" ]]; then
-    set -o allexport
-    # shellcheck source=/dev/null
-    source "$PROJECT_ROOT/.env"
-    set +o allexport
+    while IFS='=' read -r key value; do
+        # Skip blank lines and comments
+        [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
+        # Trim leading whitespace from key
+        key="${key#"${key%%[![:space:]]*}"}"
+        # Strip surrounding quotes from value
+        value="${value%\"}"
+        value="${value#\"}"
+        value="${value%\'}"
+        value="${value#\'}"
+        export "$key=$value"
+    done < "$PROJECT_ROOT/.env"
 fi
 
 # ── Preflight/Verify helpers ─────────────────────────────────────
@@ -116,8 +140,13 @@ divider() {
 
 summary() {
     local end_time
-    end_time=$(date +%s%N 2>/dev/null || date +%s)
-    local total_ms=$(( (end_time - START_TIME) / 1000000 ))
+    end_time=$(_goat_now)
+    local total_ms
+    if [[ "$_GOAT_TIME_NS" == true ]]; then
+        total_ms=$(( (end_time - START_TIME) / 1000000 ))
+    else
+        total_ms=$(( (end_time - START_TIME) * 1000 ))
+    fi
     local total_secs=$((total_ms / 1000))
     local total_frac=$((total_ms % 1000 / 100))
 
@@ -143,8 +172,13 @@ summary() {
 elapsed_since() {
     local start=$1
     local end
-    end=$(date +%s%N 2>/dev/null || date +%s)
-    local ms=$(( (end - start) / 1000000 ))
+    end=$(_goat_now)
+    local ms
+    if [[ "$_GOAT_TIME_NS" == true ]]; then
+        ms=$(( (end - start) / 1000000 ))
+    else
+        ms=$(( (end - start) * 1000 ))
+    fi
     if [[ $ms -lt 1000 ]]; then
         echo "${ms}ms"
     else

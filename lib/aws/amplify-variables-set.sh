@@ -202,12 +202,13 @@ for var in "${NEW_VARS[@]}"; do
     VALUE="${var#*=}"
     OLD_VALUE=$(echo "${CURRENT_VARS}" | jq -r --arg key "${KEY}" '.[$key] // empty')
 
+    MASKED="****(${#VALUE} chars)"
     if [[ -z "${OLD_VALUE}" ]]; then
-        echo -e "  ${GREEN}+ ${KEY}${NC}=${VALUE} (new)"
+        echo -e "  ${GREEN}+ ${KEY}${NC}=${MASKED} (new)"
     elif [[ "${OLD_VALUE}" != "${VALUE}" ]]; then
-        echo -e "  ${YELLOW}~ ${KEY}${NC}=${VALUE} (was: ${OLD_VALUE})"
+        echo -e "  ${YELLOW}~ ${KEY}${NC}=${MASKED} (changed)"
     else
-        echo -e "  ${BLUE}= ${KEY}${NC}=${VALUE} (unchanged)"
+        echo -e "  ${BLUE}= ${KEY}${NC} (unchanged)"
     fi
 done
 

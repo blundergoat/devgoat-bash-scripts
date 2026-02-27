@@ -28,7 +28,7 @@ echo ""
 
 # 1. Python agent syntax check
 step "Python agent syntax"
-t=$(date +%s%N)
+t=$(_goat_now)
 if [[ -d "$agent_dir" ]] && command -v python3 &>/dev/null; then
     py_errors=0
     py_files=0
@@ -59,7 +59,7 @@ fi
 
 # 2. Python lint (ruff)
 step "Python lint (ruff)"
-t=$(date +%s%N)
+t=$(_goat_now)
 RUFF_BIN=""
 if command -v ruff &>/dev/null; then
     RUFF_BIN="ruff"
@@ -86,7 +86,7 @@ fi
 
 # 3. Python tests (pytest)
 step "Tests (pytest)"
-t=$(date +%s%N)
+t=$(_goat_now)
 PYTEST_BIN=""
 if command -v pytest &>/dev/null; then
     PYTEST_BIN="pytest"
@@ -113,7 +113,7 @@ fi
 
 # 4. Docker Compose validate
 step "Docker Compose config"
-t=$(date +%s%N)
+t=$(_goat_now)
 compose_file="$PROJECT_ROOT/${COMPOSE_FILE_NAME}"
 if [[ -f "$compose_file" ]] && command -v docker &>/dev/null; then
     compose_output=$(docker compose -f "$compose_file" config --quiet 2>&1)

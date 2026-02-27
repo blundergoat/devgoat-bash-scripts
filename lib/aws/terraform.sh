@@ -70,10 +70,13 @@ NC='\033[0m'
 
 # Load .env file if it exists
 if [[ -f "$ENV_FILE" ]]; then
-    set -a
-    # shellcheck source=/dev/null
-    source <(grep -v '^\s*#' "$ENV_FILE" | grep -v '^\s*$')
-    set +a
+    while IFS='=' read -r key value; do
+        [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
+        key="${key#"${key%%[![:space:]]*}"}"
+        value="${value%\"}" ; value="${value#\"}"
+        value="${value%\'}" ; value="${value#\'}"
+        export "$key=$value"
+    done < "$ENV_FILE"
 fi
 
 # Export AWS profile and region

@@ -72,9 +72,19 @@ done
 # Collect scripts via git ls-files
 cd "$REPO_ROOT" || exit 1
 
+# Warn about fix mode before starting
+if [[ "$FIX_MODE" == true ]]; then
+    warn "--fix mode will auto-apply shellcheck patches to files via 'git apply'."
+    if [[ -t 0 ]]; then
+        read -p "Continue? [y/N] " -n 1 -r
+        echo
+        [[ $REPLY =~ ^[Yy]$ ]] || { echo "Cancelled."; exit 0; }
+    fi
+fi
+
 SCRIPTS=()
 while IFS= read -r file; do
-    SCRIPTS+=("$file")
+    [[ -f "$file" ]] && SCRIPTS+=("$file")
 done < <(git ls-files '*.sh' 2>/dev/null)
 
 if [[ ${#SCRIPTS[@]} -eq 0 ]]; then

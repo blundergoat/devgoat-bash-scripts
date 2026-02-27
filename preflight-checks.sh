@@ -28,7 +28,16 @@ PASSED=0
 FAILED=0
 ERRORS=0
 FAILURES=()
-START_TIME=$(date +%s%N 2>/dev/null || date +%s)
+# Detect nanosecond support (GNU date has %N, BSD/macOS does not)
+if date +%s%N 2>/dev/null | grep -q 'N'; then
+    _GOAT_TIME_NS=false
+else
+    _GOAT_TIME_NS=true
+fi
+_goat_now() {
+    if [[ "$_GOAT_TIME_NS" == true ]]; then date +%s%N; else date +%s; fi
+}
+START_TIME=$(_goat_now)
 
 # ── Helpers ──────────────────────────────────────────────────────
 step() {
@@ -79,8 +88,13 @@ divider() {
 elapsed_since() {
     local start=$1
     local end
-    end=$(date +%s%N 2>/dev/null || date +%s)
-    local ms=$(( (end - start) / 1000000 ))
+    end=$(_goat_now)
+    local ms
+    if [[ "$_GOAT_TIME_NS" == true ]]; then
+        ms=$(( (end - start) / 1000000 ))
+    else
+        ms=$(( (end - start) * 1000 ))
+    fi
     if [[ $ms -lt 1000 ]]; then
         echo "${ms}ms"
     else
@@ -92,8 +106,13 @@ elapsed_since() {
 
 summary() {
     local end_time
-    end_time=$(date +%s%N 2>/dev/null || date +%s)
-    local total_ms=$(( (end_time - START_TIME) / 1000000 ))
+    end_time=$(_goat_now)
+    local total_ms
+    if [[ "$_GOAT_TIME_NS" == true ]]; then
+        total_ms=$(( (end_time - START_TIME) / 1000000 ))
+    else
+        total_ms=$(( (end_time - START_TIME) * 1000 ))
+    fi
     local total_secs=$((total_ms / 1000))
     local total_frac=$((total_ms % 1000 / 100))
 
@@ -231,7 +250,7 @@ echo ""
 
 # 1. Shebang
 step "Shebang (#!/usr/bin/env bash)"
-t=$(date +%s%N)
+t=$(_goat_now)
 shebang_failures=()
 for file in "${SCRIPTS[@]}"; do
     first_line=$(head -n 1 "$file")
@@ -251,7 +270,7 @@ fi
 
 # 2. Strict mode
 step "Strict mode (set -euo pipefail)"
-t=$(date +%s%N)
+t=$(_goat_now)
 strict_failures=()
 for file in "${SCRIPTS[@]}"; do
     rel="${file#"$REPO_ROOT/"}"
@@ -283,7 +302,7 @@ fi
 
 # 3. Executable bit
 step "Executable bit (chmod +x)"
-t=$(date +%s%N)
+t=$(_goat_now)
 exec_failures=()
 for file in "${SCRIPTS[@]}"; do
     if [[ ! -x "$file" ]]; then
@@ -305,7 +324,7 @@ fi
 
 # 4. Bash syntax (bash -n)
 step "Bash syntax (bash -n)"
-t=$(date +%s%N)
+t=$(_goat_now)
 syntax_failures=()
 for file in "${SCRIPTS[@]}"; do
     if ! bash -n "$file" 2>/dev/null; then
@@ -324,7 +343,7 @@ fi
 
 # 5. Shellcheck
 step "Shellcheck"
-t=$(date +%s%N)
+t=$(_goat_now)
 if ! command -v shellcheck &>/dev/null; then
     skip "shellcheck not installed"
 else
@@ -347,7 +366,7 @@ fi
 
 # 6. No secrets staged
 step "No secrets staged"
-t=$(date +%s%N)
+t=$(_goat_now)
 if ! git -C "$REPO_ROOT" rev-parse --git-dir &>/dev/null; then
     skip "not a git repository"
 else
@@ -379,7 +398,7 @@ fi
 
 # 7. Bats tests
 step "Bats tests (tests/)"
-t=$(date +%s%N)
+t=$(_goat_now)
 if ! command -v bats &>/dev/null; then
     installer="$REPO_ROOT/lib/setup/install-bats-core.sh"
     if [[ -x "$installer" ]]; then
