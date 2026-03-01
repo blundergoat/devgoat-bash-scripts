@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Git Status — Quick overview of the current repo state
+# Git Status - Quick overview of the current repo state
 # =============================================================================
 #
 # Shows branch, recent commits, and working tree status at a glance.
 # Useful as a dashboard "home screen" script.
 #
 # Usage:
-#   ./lib/dev/git-status.sh
-#   ./lib/dev/git-status.sh -h|--help
+#   ./lib/workflow/git-status.sh
+#   ./lib/workflow/git-status.sh -h|--help
 #
 # =============================================================================
 
@@ -22,7 +22,7 @@ RESET='\033[0m'
 
 show_help() {
     cat << 'EOF'
-Usage: ./lib/dev/git-status.sh
+Usage: ./lib/workflow/git-status.sh
 
 Show a quick overview of the current git repository:
   - Current branch and remote tracking info
@@ -70,7 +70,7 @@ echo -e "${BOLD}  Working Tree${RESET}"
 echo -e "  ${DIM}$(printf '─%.0s' {1..50})${RESET}"
 status=$(git status --short 2>/dev/null)
 if [[ -z "${status}" ]]; then
-    echo -e "  ${GREEN}Clean — nothing to commit${RESET}"
+    echo -e "  ${GREEN}Clean - nothing to commit${RESET}"
 else
     echo "${status}" | while IFS= read -r line; do
         echo "  ${line}"

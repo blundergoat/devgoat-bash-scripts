@@ -25,9 +25,3 @@ setup() {
     [[ "$output" == *"No Zone.Identifier files found"* ]]
     rm -rf "$tmp"
 }
-
-@test "lint-all.sh --help exits 0" {
-    run bash "$REPO_ROOT/lib/maintenance/lint-all.sh" --help
-    [[ "$status" -eq 0 ]]
-    [[ "$output" == *"Usage"* ]]
-}

@@ -4,7 +4,7 @@ applyTo: "lib/dev/**,lib/maintenance/**,lib/tools/**,lib/codegen/**"
 
 # dev / maintenance / tools / codegen Domains
 
-These four directories share the same self-contained script pattern. No shared library — each script defines its own colors and logging helpers inline.
+These four directories share the same self-contained script pattern. No shared library - each script defines its own colors and logging helpers inline.
 
 ## Logging Pattern
 
@@ -16,7 +16,7 @@ warn()    { echo -e "${YELLOW}[warn]${NC} $*"; }
 error()   { echo -e "${RED}[error]${NC} $*"; exit 1; }
 ```
 
-Function names and tag styles vary by script — match the existing pattern in the file you're editing.
+Function names and tag styles vary by script - match the existing pattern in the file you're editing.
 
 ## Strict Mode Exceptions
 
@@ -32,7 +32,7 @@ All other scripts in these directories use `set -euo pipefail`.
 ## Notable Scripts
 
 ### `dev/health-check-localdev.sh`
-Redefines stacks-like helpers inline (`step`, `pass`, `fail`, `warn`, `section`, `probe`) rather than sourcing `_common.sh`. This is intentional — the script is a template meant to be copied into projects that don't have access to the stacks library. Do not refactor to source `_common.sh`.
+Redefines stacks-like helpers inline (`step`, `pass`, `fail`, `warn`, `section`, `probe`) rather than sourcing `_common.sh`. This is intentional - the script is a template meant to be copied into projects that don't have access to the stacks library. Do not refactor to source `_common.sh`.
 
 ### `dev/start-dev.sh`
 Largest script in the repo (~580 lines). Manages Ollama, Python agent, Mercure hub, and PHP dev server as background processes. Uses a `cleanup` trap for graceful shutdown. The `env_default` helper reads from `.env` without exporting (respects PHP's `variables_order` limitation).
@@ -63,6 +63,6 @@ Template. Finds `.env.example` files and copies to `.env` if missing. Supports `
 | Directory | Templates | Drop-ins |
 |-----------|-----------|----------|
 | `dev/` | api-load-test, db-reset, docker-logs, health-check-localdev, health-check-remote, start-dev, sync-env | docker-cleanup, gpu-check, port-check |
-| `maintenance/` | — | git-cleanup, lint-all, make-scripts-executable, remove-zone-identifier, scan-secrets |
-| `tools/` | — | install-bats-core, install-ollama, uninstall-ollama, install-starship, uninstall-starship |
-| `codegen/` | — | generate-code-map |
+| `maintenance/` | - | git-cleanup, lint-all, make-scripts-executable, remove-zone-identifier, scan-secrets |
+| `tools/` | - | install-bats-core, install-ollama, uninstall-ollama, install-starship, uninstall-starship |
+| `codegen/` | - | generate-code-map |

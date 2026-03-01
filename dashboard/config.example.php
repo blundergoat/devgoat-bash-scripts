@@ -3,14 +3,14 @@
  * Dashboard script registry.
  *
  * Each entry defines a script the dashboard can run. Only scripts listed here
- * are executable — this file is the whitelist.
+ * are executable - this file is the whitelist.
  *
  * Auto-copied to config.php on first run. Edit config.php to match your project.
  *
  * Schema (script entries):
  *   id            (required) Unique identifier used in API calls
  *   name          (required) Display label in the sidebar
- *   cmd           (required) Script filename — always relative to SCRIPTS_DIR (never absolute)
+ *   cmd           (required) Script filename - always relative to SCRIPTS_DIR (never absolute)
  *   desc          (required) One-line description shown below the name
  *   args          (optional) Array of fixed CLI arguments appended to the command
  *   confirm       (optional) true → show confirmation dialog before running

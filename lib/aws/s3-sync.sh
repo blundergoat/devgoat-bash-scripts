@@ -168,7 +168,7 @@ aws s3 sync "${SYNC_ARGS[@]}" \
 # ── Summary ────────────────────────────────────────────────────────
 if [[ "$DRY_RUN" == true ]]; then
     log ""
-    log "DRY RUN — no files were uploaded"
+    log "DRY RUN - no files were uploaded"
 else
     success ""
     success "Sync complete!"

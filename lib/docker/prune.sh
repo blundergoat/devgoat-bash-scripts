@@ -195,7 +195,7 @@ echo -e "${DIM}━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 if [[ "$DRY_RUN" == true ]]; then
-    echo -e "  ${YELLOW}${BOLD}DRY RUN${RESET} — no resources were removed"
+    echo -e "  ${YELLOW}${BOLD}DRY RUN${RESET} - no resources were removed"
 else
     # Show total disk usage after cleanup
     disk_usage=$(docker system df --format "{{.Size}}" 2>/dev/null | head -1 || echo "unknown")

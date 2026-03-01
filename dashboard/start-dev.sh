@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Dashboard Launcher — Start the PHP script-runner web UI
+# Dashboard Launcher - Start the PHP script-runner web UI
 # =============================================================================
 #
 # Starts a PHP built-in server serving the dashboard on localhost.
@@ -63,7 +63,7 @@ show_help() {
 Usage: $0 [OPTIONS]
 
 Start the PHP dashboard web UI for running project scripts from the browser.
-Binds to 127.0.0.1 only — never exposed to the network.
+Binds to 127.0.0.1 only - never exposed to the network.
 
 OPTIONS:
     -h, --help          Show this help message
@@ -125,12 +125,12 @@ if [[ "${PHP_MAJOR}" -lt 8 ]] || { [[ "${PHP_MAJOR}" -eq 8 ]] && [[ "${PHP_MINOR
 fi
 log "PHP ${PHP_VERSION} found"
 
-# script(1) — required for PTY emulation during script execution
+# script(1) - required for PTY emulation during script execution
 if ! command -v script &>/dev/null; then
-    error "script command not found — install util-linux"
+    error "script command not found - install util-linux"
 fi
 
-# config.php — auto-create from example if missing
+# config.php - auto-create from example if missing
 if [[ ! -f "${SCRIPT_DIR}/config.php" ]]; then
     if [[ -f "${SCRIPT_DIR}/config.example.php" ]]; then
         warn "config.php not found — creating from config.example.php"

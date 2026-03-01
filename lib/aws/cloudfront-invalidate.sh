@@ -138,7 +138,7 @@ PATHS_ARRAY=($INVALIDATION_PATHS)
 
 if [[ "$DRY_RUN" == true ]]; then
     log ""
-    log "DRY RUN — Would invalidate:"
+    log "DRY RUN - Would invalidate:"
     for path in "${PATHS_ARRAY[@]}"; do
         log "  $path"
     done

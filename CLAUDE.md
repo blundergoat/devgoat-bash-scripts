@@ -4,7 +4,7 @@ Context for Claude Code when working on the devgoat-bash-scripts repository.
 
 ## Project Identity
 
-devgoat-bash-scripts is a collection of reusable shell scripts organized by domain under `lib/`. Scripts are either **drop-in** (run as-is) or **template** (copy and fill in the `# ---- CONFIGURATION ----` block). No build system, package manager, or test framework.
+devgoat-bash-scripts is a collection of reusable shell scripts organized by domain under `lib/`. Scripts are either **drop-in** (run as-is) or **template** (copy and fill in the `# ---- CONFIGURATION ----` block). No build system or package manager; includes a bats test suite under `tests/`.
 
 ## Essential Commands
 
@@ -14,16 +14,19 @@ shellcheck path/to/script.sh                           # Lint a script
 ./lib/maintenance/make-scripts-executable.sh            # Restore chmod +x on all .sh files
 ./lib/maintenance/make-scripts-executable.sh --dry-run  # Preview which files need executable bit
 ./lib/codegen/generate-code-map.sh                      # Inspect repository structure
+./help.sh                                               # Script index (delegates to lib/workflow/help-index.sh)
+./preflight-checks.sh                                   # Quality gate (delegates to lib/quality/preflight.sh)
+bats tests/ --recursive                                 # Run bats test suite
 ```
 
-No automated tests. Validate changes by: syntax-checking with `bash -n`, running `shellcheck`, running `--help`, and exercising at least one safe execution path per changed script.
+Validate changes by: syntax-checking with `bash -n`, running `shellcheck`, running `--help`, running `bats tests/ --recursive`, and exercising at least one safe execution path per changed script.
 
 ## Hard Rules
 
-- `#!/usr/bin/env bash` + `set -euo pipefail` on every script. Exception: scripts that must continue past failures use `set -uo pipefail` — see `docs/footguns.md`.
-- Never modify values inside `# ---- CONFIGURATION ----` blocks — those are template placeholders.
+- `#!/usr/bin/env bash` + `set -euo pipefail` on every script. Exception: scripts that must continue past failures use `set -uo pipefail` - see `docs/footguns.md`.
+- Never modify values inside `# ---- CONFIGURATION ----` blocks - those are template placeholders.
 - Match the logging paradigm of sibling scripts (ai-cli colors, stacks step/pass/fail, standalone inline functions). See `docs/footguns.md` for details.
-- `_common.sh` source patterns differ between `ai-cli/` (same-dir) and `stacks/` (parent traversal) — they are not interchangeable.
+- `_common.sh` source patterns differ between `ai-cli/` (same-dir) and `stacks/` (parent traversal) - they are not interchangeable.
 - Only `ai-cli/_common.sh` sanitizes WSL PATH. Other domains use bare `command -v`.
 - Run `bash -n` and `shellcheck` on changed scripts before declaring done.
 - Never commit credentials or secrets.
@@ -31,11 +34,11 @@ No automated tests. Validate changes by: syntax-checking with `bash -n`, running
 
 ## Workflow Rules
 
-- **Read before fixing** — Read actual code and trace execution paths before proposing changes. Don't assume behavior from filenames or variable names.
-- **Verify completeness** — After modifying a script: 1) strict mode, 2) `show_help()`, 3) CONFIGURATION block if template, 4) platform handling, 5) logging style matches siblings, 6) executable bit.
-- **Run preflight checks** — `bash -n` and `shellcheck` on all changed scripts. Fix errors before reporting done.
-- **Deep first pass** — When reviewing or debugging, do a deep pass. Check for false positives by reading surrounding code.
-- **Don't blindly apply external suggestions** — Investigate Copilot PR comments or external review feedback against the actual codebase first. Some suggestions cause breaking changes in shell scripts.
+- **Read before fixing** - Read actual code and trace execution paths before proposing changes. Don't assume behavior from filenames or variable names.
+- **Verify completeness** - After modifying a script: 1) strict mode, 2) `show_help()`, 3) CONFIGURATION block if template, 4) platform handling, 5) logging style matches siblings, 6) executable bit.
+- **Run preflight checks** - `bash -n` and `shellcheck` on all changed scripts. Fix errors before reporting done.
+- **Deep first pass** - When reviewing or debugging, do a deep pass. Check for false positives by reading surrounding code.
+- **Don't blindly apply external suggestions** - Investigate Copilot PR comments or external review feedback against the actual codebase first. Some suggestions cause breaking changes in shell scripts.
 
 ## Common Workflows
 
@@ -43,11 +46,11 @@ No automated tests. Validate changes by: syntax-checking with `bash -n`, running
 
 **Adding a stacks script:** Source `../_common.sh`. Use `step`/`pass`/`fail`/`summary` for checks, `log_info`/`log_ok` for actions. Omit `-e` if the script must report all failures.
 
-**Adding a standalone script (aws/dev/maintenance/tools/codegen):** Self-contained — define inline colors and `log`/`success`/`warn`/`error` functions. Use `set -euo pipefail`. Add CONFIGURATION block if template.
+**Adding a standalone script (aws/workflow/deps/docker/health/quality/maintenance/tools/codegen):** Self-contained - define inline colors and `log`/`success`/`warn`/`error` functions. Use `set -euo pipefail`. Add CONFIGURATION block if template.
 
 ## Commit Format
 
-Short, imperative subjects (e.g., `add amplify variable export script`). One commit per script or workflow. Never commit credentials.
+Short, imperative subjects (e.g., `add docker restart wrapper`). One commit per script or workflow. Never commit credentials.
 
 ## Context Router
 
@@ -59,6 +62,6 @@ Load these files on demand when working in a specific domain:
 | `lib/ai-cli/` | `.github/instructions/ai-cli.instructions.md` | Working on AI CLI installers |
 | `lib/aws/` | `.github/instructions/aws.instructions.md` | Working on AWS scripts |
 | `lib/stacks/` | `.github/instructions/stacks.instructions.md` | Working on stack scripts |
-| `lib/dev/`, `lib/maintenance/`, `lib/tools/`, `lib/codegen/` | `.github/instructions/dev.instructions.md` | Working on dev/maintenance/setup/codegen scripts |
+| `lib/workflow/`, `lib/docker/`, `lib/health/`, `lib/maintenance/`, `lib/tools/`, `lib/codegen/` | `.github/instructions/dev.instructions.md` | Working on standalone/orchestration scripts |
 | Orientation | `docs/code-map.md` | Understanding repo structure |
 | Gotchas | `docs/footguns.md` | Debugging cross-domain issues |

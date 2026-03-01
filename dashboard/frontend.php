@@ -661,8 +661,16 @@ function copyOutput() {
     if (!text.trim()) return;
     navigator.clipboard.writeText(text).then(() => {
         const btn = $('#copyBtn');
-        btn.textContent = 'Copied!';
-        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+        btn.textContent = '\u2714 Copied!';
+        btn.style.background = 'rgba(22,163,74,0.15)';
+        btn.style.borderColor = 'var(--c-green)';
+        btn.style.color = 'var(--c-green)';
+        setTimeout(() => {
+            btn.textContent = 'Copy';
+            btn.style.background = '';
+            btn.style.borderColor = '';
+            btn.style.color = '';
+        }, 1500);
     });
 }
 

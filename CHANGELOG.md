@@ -6,6 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [v1.3.0] - 2026-03-01
+
+### Added
+
+- **Rust stack scripts** - added `lib/stacks/rust/` with setup, verify, preflight, dependency install/update scripts.
+- **`lib/docker/`** - docker compose wrappers: up, down, restart, prune, logs-tail, network-heal, mount-doctor.
+- **`lib/workflow/`** - help-index, git-change-branch, git-status, sync-env.
+- **`lib/health/`** - check-api-auth, check-gpu, load-test, port-check.
+- **`lib/aws/health-check.sh`** - comprehensive AWS infrastructure health check (credentials, Secrets Manager, ECS, API, DynamoDB, CloudWatch). Moved from `lib/health/check-remote.sh`.
+
+### Changed
+
+- **`help.sh` now delegates** to `lib/workflow/help-index.sh` for categorized script listing with keyword search.
+- **`preflight-checks.sh` restored to standalone** - self-contained 7-check quality gate (shebang, strict mode, executable bit, bash -n, shellcheck, no secrets staged, bats tests). No longer delegates.
+- **`git-change-branch.sh` safe branch switching** - now stashes uncommitted changes and fetches before checkout. Accidental switches are reversible with `git stash pop`.
+- **Dashboard process management** - `dashboard/index.php` no longer requires ext-posix; process checks/signals now use shell-based helpers.
+- **Stack DB rebuilds** - stack-specific `lib/stacks/*/rebuild-database.sh` scripts handle DB rebuilds directly.
+
+### Removed
+
+- **`lib/dev/`** - all legacy compatibility wrappers removed (no deprecation period).
+- **`lib/deps/`** - stacks handle dependencies directly via `lib/stacks/*/dependencies-*.sh`.
+- **`lib/quality/`** - preflight-checks.sh is now standalone; lint scripts removed.
+- **`lib/db/`** - replaced by `lib/stacks/*/rebuild-database.sh`.
+- **`lib/workflow/`** project-specific scripts - rebuild-full.sh, rebuild-smart.sh, setup-initial.sh, setup-verify.sh, stop-dev.sh, switch-mode.sh.
+- **`lib/health/`** project-specific scripts - report.sh, check-local.sh, check-remote.sh, check-aws.sh.
+- **`lib/aws/`** project-specific scripts - deploy.sh, deploy-ecr-ecs.sh, amplify-health-check.sh, amplify-variables-get.sh, amplify-variables-set.sh.
+- **`lib/maintenance/lint-all.sh`**
+
+### Documentation
+
+- Updated `README.md`, `docs/code-map.md`, `CLAUDE.md`, `AGENTS.md`, and `GEMINI.md` for the simplified structure.
+- Removed stale bats test referencing deleted `lib/quality/` scripts.
+
 ## [v1.2.0] - 2026-03-01
 
 ### Added
