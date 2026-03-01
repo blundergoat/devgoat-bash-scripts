@@ -42,9 +42,9 @@ return [
     [
         'category' => 'Quick Info',
         'scripts' => [
-            ['id' => 'git-status',   'name' => 'Git Status',   'cmd' => 'lib/dev/git-status.sh',            'desc' => 'Branch, recent commits, and working tree status'],
-            ['id' => 'git-checkout', 'name' => 'Git Checkout', 'cmd' => 'lib/dev/git-checkout.sh',          'desc' => 'Switch to a branch', 'prompt' => ['label' => 'Branch name', 'type' => 'text']],
-            ['id' => 'port-check',   'name' => 'Port Check',   'cmd' => 'lib/dev/port-check.sh',            'desc' => 'Show what is listening on common ports', 'prompt' => ['label' => 'Ports (comma-separated, or leave empty for defaults)', 'type' => 'text', 'optional' => true]],
+            ['id' => 'git-status',   'name' => 'Git Status',   'cmd' => 'lib/workflow/git-status.sh',            'desc' => 'Branch, recent commits, and working tree status'],
+            ['id' => 'git-checkout', 'name' => 'Git Checkout', 'cmd' => 'lib/workflow/git-change-branch.sh',          'desc' => 'Switch to a branch', 'prompt' => ['label' => 'Branch name', 'type' => 'text']],
+            ['id' => 'port-check',   'name' => 'Port Check',   'cmd' => 'lib/health/port-check.sh',          'desc' => 'Show what is listening on common ports', 'prompt' => ['label' => 'Ports (comma-separated, or leave empty for defaults)', 'type' => 'text', 'optional' => true]],
             ['id' => 'code-map',     'name' => 'Code Map',     'cmd' => 'lib/codegen/generate-code-map.sh', 'desc' => 'Generate annotated directory tree'],
         ],
     ],

@@ -15,7 +15,7 @@ shellcheck path/to/script.sh                           # Lint a script
 ./lib/maintenance/make-scripts-executable.sh --dry-run  # Preview which files need executable bit
 ./lib/codegen/generate-code-map.sh                      # Inspect repository structure
 ./help.sh                                               # Script index (delegates to lib/workflow/help-index.sh)
-./preflight-checks.sh                                   # Quality gate (delegates to lib/quality/preflight.sh)
+./preflight-checks.sh                                   # Quality gate (repo-level checks)
 bats tests/ --recursive                                 # Run bats test suite
 ```
 
@@ -54,6 +54,6 @@ Load these files on demand when working in a specific domain:
 | `lib/ai-cli/` | `.github/instructions/ai-cli.instructions.md` | Working on AI CLI installers |
 | `lib/aws/` | `.github/instructions/aws.instructions.md` | Working on AWS scripts |
 | `lib/stacks/` | `.github/instructions/stacks.instructions.md` | Working on stack scripts |
-| `lib/workflow/`, `lib/deps/`, `lib/docker/`, `lib/health/`, `lib/quality/`, `lib/dev/`, `lib/maintenance/`, `lib/tools/`, `lib/codegen/` | `.github/instructions/dev.instructions.md` | Working on standalone/orchestration scripts |
+| `lib/workflow/`, `lib/docker/`, `lib/health/`, `lib/maintenance/`, `lib/tools/`, `lib/codegen/` | `.github/instructions/dev.instructions.md` | Working on standalone/orchestration scripts |
 | Orientation | `docs/code-map.md` | Understanding repo structure |
 | Gotchas | `docs/footguns.md` | Debugging cross-domain issues |

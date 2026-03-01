@@ -6,15 +6,13 @@ Reusable shell scripts for setup, diagnostics, deployments, and maintenance acro
 
 All scripts live under `lib/`. Root entrypoints:
 - `./help.sh` -> delegates to `lib/workflow/help-index.sh`
-- `./preflight-checks.sh` -> delegates to `lib/quality/preflight.sh`
+- `./preflight-checks.sh` -> repo-wide quality gate (syntax, shellcheck, help flags, bats)
 
 | Directory | Purpose |
 |---|---|
 | `lib/workflow/` | High-level workflow entrypoints and git helpers |
-| `lib/deps/` | Dependency manager and stack dependency dispatch helpers |
 | `lib/docker/` | Docker operations (logs, prune) |
 | `lib/health/` | Local/remote diagnostics, GPU/ports, load testing |
-| `lib/quality/` | Repo/stack lint and preflight gates |
 | `lib/aws/` | AWS deploy + infra + secrets wrappers |
 | `lib/stacks/` | Stack-specific setup/deps/preflight/verify scripts |
 | `lib/ai-cli/` | AI CLI installers/uninstallers |
@@ -32,9 +30,9 @@ cd devgoat-bash-scripts
 ./preflight-checks.sh
 
 # Examples
-./lib/quality/lint-shell.sh
+./lib/maintenance/make-scripts-executable.sh --dry-run
 ./lib/health/check-gpu.sh
-./lib/aws/deploy.sh
+./lib/aws/health-check.sh
 ```
 
 ## Migration Notes

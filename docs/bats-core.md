@@ -49,13 +49,13 @@ Loaded by every test file via `load ../test_helper`. Provides:
 
 - **`REPO_ROOT`** - Absolute path to the repository root.
 - **`discover_scripts`** - Finds all `.sh` files under `lib/`. Used by convention tests to iterate over every script.
-- **`STRICT_EXCEPTIONS`** - Scripts that intentionally use `set -uo pipefail` (no `-e`). Mirrors the list in `lib/quality/preflight.sh` and `docs/footguns.md`.
+- **`STRICT_EXCEPTIONS`** - Scripts that intentionally use `set -uo pipefail` (no `-e`). Mirrors the list in `preflight-checks.sh` and `docs/footguns.md`.
 - **`LIBRARY_FILES`** - Shared libraries (`_common.sh`) that don't need their own strict mode line.
 - **`is_strict_exception`** / **`is_library_file`** - Lookup helpers.
 
 ### Convention tests vs. preflight-checks.sh
 
-The `tests/conventions/` tests cover the same ground as `preflight-checks.sh` (which delegates to `lib/quality/preflight.sh`). The difference:
+The `tests/conventions/` tests cover the same ground as `preflight-checks.sh` (standalone root quality gate). The difference:
 
 | | `preflight-checks.sh` | `tests/conventions/` |
 |---|---|---|
@@ -159,7 +159,7 @@ Do **not** run scripts that modify system state (install packages, delete files,
 
 When you add or modify scripts, check:
 
-1. **New exception script** (omits `-e`) - Add to `STRICT_EXCEPTIONS` in `test_helper.bash`, `lib/quality/preflight.sh`, and `docs/footguns.md`.
-2. **New `_common.sh` library** - Add to `LIBRARY_FILES` in `test_helper.bash` and `lib/quality/preflight.sh`.
+1. **New exception script** (omits `-e`) - Add to `STRICT_EXCEPTIONS` in `test_helper.bash`, `preflight-checks.sh`, and `docs/footguns.md`.
+2. **New `_common.sh` library** - Add to `LIBRARY_FILES` in `test_helper.bash` and `preflight-checks.sh`.
 3. **New script with `show_help()`** - Already covered by `help-flag.bats` automatically.
 4. **New template script** - Already covered by `template-config.bats` automatically.
