@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# devgoat-bash-scripts Preflight Checks — repo-level quality gate
+# devgoat-bash-scripts Preflight Checks - repo-level quality gate
 # =============================================================================
 # Usage: ./preflight-checks.sh [--fix] [-h|--help]
 # =============================================================================
@@ -143,13 +143,13 @@ Repo-level quality gate for devgoat-bash-scripts. Checks all .sh files under lib
 for conventions, syntax, and common mistakes.
 
 Checks performed:
-  1. Shebang line       — #!/usr/bin/env bash present
-  2. Strict mode        — set -euo pipefail (or -uo for known exceptions)
-  3. Executable bit     — chmod +x on all .sh files
-  4. Bash syntax        — bash -n on all .sh files
-  5. Shellcheck         — shellcheck -x (skipped if not installed)
-  6. No secrets         — no .env, credentials, or key files staged
-  7. Bats tests         — bats tests/ --recursive (auto-installs bats-core if missing)
+  1. Shebang line       - #!/usr/bin/env bash present
+  2. Strict mode        - set -euo pipefail (or -uo for known exceptions)
+  3. Executable bit     - chmod +x on all .sh files
+  4. Bash syntax        - bash -n on all .sh files
+  5. Shellcheck         - shellcheck -x (skipped if not installed)
+  6. No secrets         - no .env, credentials, or key files staged
+  7. Bats tests         - bats tests/ --recursive (auto-installs bats-core if missing)
 
 OPTIONS:
     -h, --help    Show this help message
@@ -217,18 +217,20 @@ if [[ ${#SCRIPTS[@]} -eq 0 ]]; then
     exit 1
 fi
 
-# Known exceptions: scripts that intentionally omit -e
+# Known exceptions: scripts that intentionally omit -e (use set -uo pipefail)
+# - stacks verify/preflight: must continue past individual check failures
+# - health checks: must report all failures, not stop at first
+# - _common.sh libraries: sourced, not executed directly
 STRICT_EXCEPTIONS=(
     "lib/stacks/php/verify.sh"
-    "lib/stacks/python/verify.sh"
-    "lib/stacks/node/verify.sh"
     "lib/stacks/php/preflight-checks.sh"
+    "lib/stacks/python/verify.sh"
     "lib/stacks/python/preflight-checks.sh"
+    "lib/stacks/node/verify.sh"
     "lib/stacks/node/preflight-checks.sh"
-    "lib/dev/gpu-check.sh"
-    "lib/dev/health-check-localdev.sh"
-    "lib/dev/start-dev.sh"
-    "lib/maintenance/lint-all.sh"
+    "lib/stacks/rust/verify.sh"
+    "lib/stacks/rust/preflight-checks.sh"
+    "lib/health/check-gpu.sh"
     "lib/ai-cli/_common.sh"
     "lib/stacks/_common.sh"
 )
@@ -244,7 +246,7 @@ is_strict_exception() {
 }
 
 # ── Checks ───────────────────────────────────────────────────────
-header "Preflight Checks — devgoat-bash-scripts"
+header "Preflight Checks - devgoat-bash-scripts"
 echo -e "  ${DIM}$(date '+%Y-%m-%d %H:%M:%S')  (${#SCRIPTS[@]} scripts)${RESET}"
 echo ""
 
@@ -279,7 +281,7 @@ for file in "${SCRIPTS[@]}"; do
     if is_strict_exception "$rel"; then
         # Exceptions must have at least set -uo pipefail
         if ! echo "$content" | grep -qE '^set -uo pipefail'; then
-            # Libraries (_common.sh) may not need any set at all — skip them
+            # Libraries (_common.sh) may not need any set at all - skip them
             case "$rel" in
                 */_common.sh) ;;
                 *) strict_failures+=("$rel (expected set -uo pipefail)") ;;
@@ -352,7 +354,7 @@ if ! command -v shellcheck &>/dev/null; then
         brew install shellcheck >/dev/null 2>&1
     fi
     if ! command -v shellcheck &>/dev/null; then
-        skip "shellcheck not installed — install manually: sudo apt install shellcheck | brew install shellcheck"
+        skip "shellcheck not installed - install manually: sudo apt install shellcheck | brew install shellcheck"
     fi
 fi
 if command -v shellcheck &>/dev/null; then
@@ -388,7 +390,7 @@ else
                     secret_hits+=("$sfile")
                     ;;
                 *credentials*|*secret*)
-                    # Skip shell scripts — these manage secrets, they aren't secrets
+                    # Skip shell scripts - these manage secrets, they aren't secrets
                     [[ "$sfile" == *.sh ]] && continue
                     secret_hits+=("$sfile")
                     ;;

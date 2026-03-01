@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 #
-# health-check-remote.sh - Comprehensive health check for production infrastructure
+# health-check.sh - Comprehensive health check for AWS production infrastructure
 #
 # USAGE:
-#   ./scripts/health-check-remote.sh           # Run all checks
-#   ./scripts/health-check-remote.sh --quick   # Skip slow checks (logs analysis)
-#   ./scripts/health-check-remote.sh --logs    # Only check CloudWatch logs
-#   ./scripts/health-check-remote.sh --ecs     # Only check ECS service
-#   ./scripts/health-check-remote.sh --api     # Only check production API
-#   ./scripts/health-check-remote.sh --secrets # Only check Secrets Manager
+#   ./lib/aws/health-check.sh           # Run all checks
+#   ./lib/aws/health-check.sh --quick   # Skip slow checks (logs analysis)
+#   ./lib/aws/health-check.sh --logs    # Only check CloudWatch logs
+#   ./lib/aws/health-check.sh --ecs     # Only check ECS service
+#   ./lib/aws/health-check.sh --api     # Only check production API
+#   ./lib/aws/health-check.sh --secrets # Only check Secrets Manager
 #
 # WHAT IT CHECKS:
 #   1. AWS Credentials - Verify we can authenticate

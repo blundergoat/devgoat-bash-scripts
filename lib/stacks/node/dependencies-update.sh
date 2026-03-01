@@ -94,7 +94,7 @@ else
         fi
     fi
 
-    # Smoke test — run build if available
+    # Smoke test - run build if available
     step "Smoke test (build)"
     pkg_file="$NODE_APP_DIR/package.json"
     if [[ -f "$pkg_file" ]] && grep -q '"build"' "$pkg_file"; then

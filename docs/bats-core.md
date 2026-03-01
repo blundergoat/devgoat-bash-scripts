@@ -39,23 +39,23 @@ tests/
 │   └── template-config.bats     # CONFIGURATION blocks are matched and use ${VAR:-default}
 └── scripts/                      # Script-specific functional tests
     ├── codegen.bats              # generate-code-map.sh
-    ├── maintenance.bats          # make-scripts-executable.sh, remove-zone-identifier.sh, lint-all.sh
-    └── preflight.bats            # scripts/preflight-checks.sh
+    ├── maintenance.bats          # make-scripts-executable.sh, remove-zone-identifier.sh, quality lint scripts
+    └── preflight.bats            # preflight-checks.sh (root wrapper)
 ```
 
 ### test_helper.bash
 
 Loaded by every test file via `load ../test_helper`. Provides:
 
-- **`REPO_ROOT`** — Absolute path to the repository root.
-- **`discover_scripts`** — Finds all `.sh` files under `lib/`. Used by convention tests to iterate over every script.
-- **`STRICT_EXCEPTIONS`** — Scripts that intentionally use `set -uo pipefail` (no `-e`). Mirrors the list in `scripts/preflight-checks.sh` and `docs/footguns.md`.
-- **`LIBRARY_FILES`** — Shared libraries (`_common.sh`) that don't need their own strict mode line.
-- **`is_strict_exception`** / **`is_library_file`** — Lookup helpers.
+- **`REPO_ROOT`** - Absolute path to the repository root.
+- **`discover_scripts`** - Finds all `.sh` files under `lib/`. Used by convention tests to iterate over every script.
+- **`STRICT_EXCEPTIONS`** - Scripts that intentionally use `set -uo pipefail` (no `-e`). Mirrors the list in `lib/quality/preflight.sh` and `docs/footguns.md`.
+- **`LIBRARY_FILES`** - Shared libraries (`_common.sh`) that don't need their own strict mode line.
+- **`is_strict_exception`** / **`is_library_file`** - Lookup helpers.
 
 ### Convention tests vs. preflight-checks.sh
 
-The `tests/conventions/` tests cover the same ground as `scripts/preflight-checks.sh`. The difference:
+The `tests/conventions/` tests cover the same ground as `preflight-checks.sh` (which delegates to `lib/quality/preflight.sh`). The difference:
 
 | | `preflight-checks.sh` | `tests/conventions/` |
 |---|---|---|
@@ -72,12 +72,12 @@ Unit tests for the two `_common.sh` shared libraries. These source the library d
 
 **ai-cli-common.bats** tests:
 - Color variable definitions
-- `detect_platform()` — sets `GOAT_OS`, `GOAT_IS_WSL`, `GOAT_IS_GITBASH`
-- `command_exists()` — finds real commands, rejects missing ones
-- `sanitize_path_for_wsl()` — strips `/mnt/*` entries on WSL, no-op elsewhere
-- `block_gitbash()` — exits 1 when Git Bash detected
-- `confirm_or_auto()` — auto-proceeds in non-interactive mode
-- `print_platform()` — outputs platform info
+- `detect_platform()` - sets `GOAT_OS`, `GOAT_IS_WSL`, `GOAT_IS_GITBASH`
+- `command_exists()` - finds real commands, rejects missing ones
+- `sanitize_path_for_wsl()` - strips `/mnt/*` entries on WSL, no-op elsewhere
+- `block_gitbash()` - exits 1 when Git Bash detected
+- `confirm_or_auto()` - auto-proceeds in non-interactive mode
+- `print_platform()` - outputs platform info
 
 **stacks-common.bats** tests:
 - Color and symbol variable definitions
@@ -159,7 +159,7 @@ Do **not** run scripts that modify system state (install packages, delete files,
 
 When you add or modify scripts, check:
 
-1. **New exception script** (omits `-e`) — Add to `STRICT_EXCEPTIONS` in `test_helper.bash`, `scripts/preflight-checks.sh`, and `docs/footguns.md`.
-2. **New `_common.sh` library** — Add to `LIBRARY_FILES` in `test_helper.bash` and `scripts/preflight-checks.sh`.
-3. **New script with `show_help()`** — Already covered by `help-flag.bats` automatically.
-4. **New template script** — Already covered by `template-config.bats` automatically.
+1. **New exception script** (omits `-e`) - Add to `STRICT_EXCEPTIONS` in `test_helper.bash`, `lib/quality/preflight.sh`, and `docs/footguns.md`.
+2. **New `_common.sh` library** - Add to `LIBRARY_FILES` in `test_helper.bash` and `lib/quality/preflight.sh`.
+3. **New script with `show_help()`** - Already covered by `help-flag.bats` automatically.
+4. **New template script** - Already covered by `template-config.bats` automatically.

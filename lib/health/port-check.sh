@@ -156,7 +156,7 @@ for port in "${PORTS[@]}"; do
                 if kill "$LISTENER_PID" 2>/dev/null; then
                     echo -e "  ${PASS} Killed pid ${LISTENER_PID}"
                 else
-                    echo -e "  ${FAIL} ${RED}Failed to kill pid ${LISTENER_PID} — try sudo${RESET}"
+                    echo -e "  ${FAIL} ${RED}Failed to kill pid ${LISTENER_PID} - try sudo${RESET}"
                 fi
             else
                 echo -e "  ${DIM}Skipped${RESET}"

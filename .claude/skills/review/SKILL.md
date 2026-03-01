@@ -1,4 +1,4 @@
-# /review — Shell Script Code Review
+# /review - Shell Script Code Review
 
 Review shell scripts for correctness, convention compliance, and potential issues.
 
@@ -6,7 +6,7 @@ Review shell scripts for correctness, convention compliance, and potential issue
 
 1. **Read ALL changed files thoroughly before commenting.** Use `git diff --name-only` to find changed `.sh` files, then read each one in full.
 2. **For each finding, verify it's real** by reading surrounding code and tracing the execution path. Do NOT report speculative issues.
-3. **Check for false positives** — re-read the context around any suspicious code before flagging it. If unsure, note the uncertainty rather than asserting a bug.
+3. **Check for false positives** - re-read the context around any suspicious code before flagging it. If unsure, note the uncertainty rather than asserting a bug.
 4. **Verify repo conventions** for each script:
    - `#!/usr/bin/env bash` shebang
    - `set -euo pipefail` (or documented exception like `verify.sh`, `gpu-check.sh`)

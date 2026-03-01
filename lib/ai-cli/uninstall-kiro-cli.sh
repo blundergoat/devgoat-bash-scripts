@@ -51,7 +51,7 @@ else
     # Check if it's somewhere else
     if command_exists kiro-cli; then
         ACTUAL_PATH=$(command -v kiro-cli)
-        echo -e "${YELLOW}Found kiro-cli at ${ACTUAL_PATH} — remove it manually if needed.${NC}"
+        echo -e "${YELLOW}Found kiro-cli at ${ACTUAL_PATH} - remove it manually if needed.${NC}"
     fi
 fi
 

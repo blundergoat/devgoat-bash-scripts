@@ -161,7 +161,7 @@ else
     echo -e "${YELLOW}Binary not found at ${OLLAMA_BIN}${NC}"
     if command_exists ollama; then
         ACTUAL_PATH=$(command -v ollama)
-        echo -e "${YELLOW}Found ollama at ${ACTUAL_PATH} — remove it manually if needed.${NC}"
+        echo -e "${YELLOW}Found ollama at ${ACTUAL_PATH} - remove it manually if needed.${NC}"
     fi
 fi
 

@@ -30,15 +30,6 @@ if (!in_array($remote, ['127.0.0.1', '::1'], true)) {
 }
 
 /**
- * Check posix extension (required for process management)
- */
-if (!extension_loaded('posix')) {
-    http_response_code(500);
-    echo 'posix extension required — install php-posix or enable it in php.ini';
-    exit(1);
-}
-
-/**
  * Constants
  *
  * Guards: each define() is wrapped in if (!defined(...)) to prevent
@@ -531,8 +522,8 @@ function handleApiStream(string $runId): void
         // Stream is done when:
         //   1. Sentinel found in log (normal exit - script wrote it before finishing), or
         //   2. Process is gone AND we've read at least some output (crash/kill case).
-        // posix_kill(pid, 0) returns true if the process exists - false means it exited.
-        $processExited = $pid > 0 ? !posix_kill($pid, 0) : false;
+        // processExists(pid) returns true if the process exists - false means it exited.
+        $processExited = $pid > 0 ? !processExists($pid) : false;
         if ($foundSentinel || ($processExited && $bytesRead > 0)) {
             $elapsedSeconds = time() - $startTime;
             saveTiming($metaScriptId, $elapsedSeconds);
@@ -597,20 +588,20 @@ function handleApiStop(string $runId): void
     // Phase 1: SIGTERM - ask the process group and the process itself to exit gracefully.
     // Negative PID sends the signal to the entire process group (script + its children).
     $negPid = -$pid;
-    @posix_kill($negPid, 15); // SIGTERM → process group
-    @posix_kill($pid, 15);    // SIGTERM → process directly
+    killProcess($negPid, 15); // SIGTERM → process group
+    killProcess($pid, 15);    // SIGTERM → process directly
 
-    // Wait up to 2s for graceful shutdown (posix_kill(pid, 0) checks if still alive)
+    // Wait up to 2s for graceful shutdown (processExists(pid) checks if still alive)
     $waitCycles = 0;
-    while ($waitCycles < 20 && posix_kill($pid, 0)) {
+    while ($waitCycles < 20 && processExists($pid)) {
         usleep(100000); // 100ms per cycle
         $waitCycles++;
     }
 
     // Phase 2: SIGKILL - force kill if still alive after grace period
-    if (posix_kill($pid, 0)) {
-        @posix_kill($negPid, 9); // SIGKILL → process group
-        @posix_kill($pid, 9);    // SIGKILL → process directly
+    if (processExists($pid)) {
+        killProcess($negPid, 9); // SIGKILL → process group
+        killProcess($pid, 9);    // SIGKILL → process directly
     }
 
     // Clean up orphaned script(1) wrapper processes that may outlive the main script
@@ -646,14 +637,31 @@ function findRunningProcess(): ?array
             continue; // corrupt or incomplete meta file
         }
         $pid = (int) $decoded['pid']; // @phpstan-ignore cast.int
-        // posix_kill(pid, 0) doesn't send a signal - it just checks if the process exists
-        if ($pid > 0 && posix_kill($pid, 0)) {
+        // processExists(pid) doesn't send a signal - it just checks if the process exists
+        if ($pid > 0 && processExists($pid)) {
             /** @var array<string, int|string> $decoded */
             return $decoded;
         }
     }
 
     return null; // all recorded processes have exited
+}
+
+/**
+ * Process signal helpers (no ext-posix dependency)
+ */
+function processExists(int $pid): bool
+{
+    if ($pid <= 0) {
+        return false;
+    }
+    exec("kill -0 " . (int) $pid . " 2>/dev/null", $out, $ret);
+    return $ret === 0;
+}
+
+function killProcess(int $pid, int $signal): void
+{
+    exec("kill -{$signal} " . (int) $pid . " 2>/dev/null");
 }
 
 /**

@@ -1,21 +1,26 @@
 # devgoat-bash-scripts
 
-A collection of reusable shell scripts for project setup, development workflows, AWS infrastructure, database management, code quality, and maintenance automation. Consolidated from battle-tested scripts used across multiple production projects.
+Reusable shell scripts for setup, diagnostics, deployments, and maintenance across mixed stacks (Go, Rust, PHP, Python, Node).
 
 ## Directory Overview
 
-All scripts live under `lib/` to keep the repo root clean. Two root-level tools - `help.sh` (script listing) and `preflight-checks.sh` (quality gate) - live at the repo root for quick access.
+All scripts live under `lib/`. Root entrypoints:
+- `./help.sh` -> delegates to `lib/workflow/help-index.sh`
+- `./preflight-checks.sh` -> delegates to `lib/quality/preflight.sh`
 
-| Directory | Description |
+| Directory | Purpose |
 |---|---|
-| [`lib/ai-cli/`](#ai-cli) | AI coding assistant installers and uninstallers |
-| [`lib/aws/`](#aws) | AWS CLI, Terraform, ECR/ECS deploy, Secrets Manager, Amplify |
-| [`lib/codegen/`](#codegen) | Code map generator |
-| [`dashboard/`](#dashboard) | PHP script-runner web UI with project switcher |
-| [`lib/dev/`](#dev) | Local dev server, logs, health checks, load testing |
-| [`lib/maintenance/`](#maintenance) | Repo housekeeping (permissions, Zone.Identifier cleanup) |
-| [`lib/tools/`](#tools) | Tool installers (Ollama, Starship, bats-core) |
-| [`lib/stacks/`](#stacks) | Language-specific setup, deps, quality gates (PHP, Python, Go) |
+| `lib/workflow/` | High-level workflow entrypoints and git helpers |
+| `lib/deps/` | Dependency manager and stack dependency dispatch helpers |
+| `lib/docker/` | Docker operations (logs, prune) |
+| `lib/health/` | Local/remote diagnostics, GPU/ports, load testing |
+| `lib/quality/` | Repo/stack lint and preflight gates |
+| `lib/aws/` | AWS deploy + infra + secrets wrappers |
+| `lib/stacks/` | Stack-specific setup/deps/preflight/verify scripts |
+| `lib/ai-cli/` | AI CLI installers/uninstallers |
+| `lib/maintenance/` | Repo housekeeping scripts |
+| `lib/tools/` | Local tool installers/uninstallers |
+| `lib/codegen/` | Code map generation |
 
 ## Quick Start
 
@@ -23,195 +28,112 @@ All scripts live under `lib/` to keep the repo root clean. Two root-level tools 
 git clone https://github.com/blundergoat/devgoat-bash-scripts.git
 cd devgoat-bash-scripts
 
-# See all available scripts
 ./help.sh
+./preflight-checks.sh
 
-# Run any script directly
-./lib/ai-cli/install-claude.sh
-./lib/dev/gpu-check.sh
-./lib/maintenance/remove-zone-identifier.sh /path/to/clean
-
-# Copy a whole stack into your project
-cp -r lib/stacks/php/ my-project/scripts/
+# Examples
+./lib/quality/lint-shell.sh
+./lib/health/check-gpu.sh
+./lib/aws/deploy.sh
 ```
 
-## Drop-in vs Template Scripts
+## Migration Notes
 
-Scripts fall into two categories:
+Removed scripts (no replacement):
+- `lib/aws/amplify-health-check.sh`
+- `lib/aws/amplify-variables-get.sh`
+- `lib/aws/amplify-variables-set.sh`
+- `lib/maintenance/lint-all.sh`
 
-**Drop-in** - Run as-is with no configuration. These are standalone tools:
-- All `lib/ai-cli/` installers/uninstallers
-- `lib/codegen/generate-code-map.sh`
-- `lib/stacks/php/check-complexity.php`
-- `lib/maintenance/make-scripts-executable.sh`
-- `lib/maintenance/remove-zone-identifier.sh`
+## Script Families
 
-**Template** - Require a `# ---- CONFIGURATION ----` block at the top with project-specific values. Copy into your project and fill in the variables:
-- All `lib/aws/` scripts
-- All `lib/stacks/` scripts (except `check-complexity.php`)
-- All `lib/dev/` scripts (except `sync-env.sh`)
+### workflow
 
-Template scripts use environment variable fallbacks (`${VAR:-default}`) so you can either edit the defaults in the script or override them via environment variables.
-
-## Script Categories
-
-### ai-cli
-
-Installers and uninstallers for AI coding assistants. All scripts handle platform detection (macOS, Linux, WSL, Git Bash) via the shared `_common.sh` library.
-
-**Prerequisites:** Node.js 18+ (auto-installed if missing for npm-based tools)
-
-| Script | Tool |
+| Script | Purpose |
 |---|---|
-| `install-claude.sh` / `uninstall-claude.sh` | [Claude Code](https://claude.ai/claude-code) |
-| `install-codex.sh` / `uninstall-codex.sh` | [OpenAI Codex](https://github.com/openai/codex) |
-| `install-cursor-agent.sh` / `uninstall-cursor-agent.sh` | [Cursor Agent](https://cursor.com) |
-| `install-gemini-cli.sh` / `uninstall-gemini-cli.sh` | [Gemini CLI](https://github.com/google/gemini-cli) |
-| `install-github-copilot.sh` / `uninstall-github-copilot.sh` | [GitHub Copilot CLI](https://github.com/github/copilot) |
-| `install-kilo.sh` / `uninstall-kilo.sh` | [Kilo Code](https://kilocode.ai) |
-| `install-kiro-cli.sh` / `uninstall-kiro-cli.sh` | [Kiro CLI](https://kiro.dev) |
+| `help-index.sh` | Categorized script index with keyword filtering |
+| `sync-env.sh` | Copy `.env.example` to `.env` where missing |
+| `git-change-branch.sh` | Branch switch helper (renamed from `git-checkout.sh`) |
+| `git-status.sh` | Repository status helper |
 
+### docker
+
+| Script | Purpose |
+|---|---|
+| `restart.sh` | Restart Docker Compose services |
+| `up.sh` | Start Docker Compose services |
+| `down.sh` | Stop Docker Compose services |
+| `prune.sh` | Prune unused Docker resources |
+| `logs-tail.sh` | Tail Docker Compose logs |
+| `network-heal.sh` | Docker network diagnostics and optional prune |
+| `mount-doctor.sh` | Container mount diagnostics |
+
+### health
+
+| Script | Purpose |
+|---|---|
+| `check-api-auth.sh` | Basic bearer-token auth probe |
+| `check-gpu.sh` | GPU availability checks |
+| `port-check.sh` | Port listener checks |
+| `load-test.sh` | API load testing |
 
 ### aws
 
-AWS infrastructure wrappers. Each script has a configuration block for AWS profile, region, and resource names.
-
-**Prerequisites:** AWS CLI v2, valid AWS SSO or IAM credentials
-
 | Script | Purpose |
 |---|---|
-| `aws-cli.sh` | AWS CLI install/upgrade, SSO login, profile management |
-| `terraform.sh` | Terraform init/plan/apply with S3 backend config |
-| `deploy-ecr-ecs.sh` | Build Docker images, push to ECR, deploy to ECS |
-| `secrets-manager-get.sh` | Fetch secrets by prefix from Secrets Manager |
-| `secrets-manager-set.sh` | Create or update secrets in Secrets Manager |
-| `secrets-manager-health-check.sh` | Verify all required secrets exist |
-| `amplify-health-check.sh` | Verify Amplify environment variables are set |
-| `amplify-variables-get.sh` | Dump Amplify environment variables |
-| `amplify-variables-set.sh` | Set Amplify environment variables from `.env` |
-
-### codegen
-
-Code generation and analysis utilities.
-
-| Script | Purpose | Type |
-|---|---|---|
-| `generate-code-map.sh` | Generate directory tree or deep file-contents map for a path | Drop-in |
-
-### dashboard
-
-PHP-based web UI for running project scripts from the browser. Localhost-only - the PHP guard returns HTTP 403 for any non-localhost request. Includes a WSL path selector for running scripts against any local project.
-
-**Prerequisites:** PHP 8.1+ with posix extension, `script(1)` command
-
-| File | Purpose | Type |
-|---|---|---|
-| `start-dev.sh` | Launch the PHP dashboard server on localhost | Template |
-| `index.php` | Router, API handlers, localhost guard, process management | PHP |
-| `frontend.php` | Single-page HTML/CSS/JS UI with project switcher | PHP |
-| `config.example.php` | Sample script registry and project list | PHP |
-
-### dev
-
-Local development workflow scripts.
-
-| Script | Purpose |
-|---|---|
-| `start-dev.sh` | Start local dev environment (Docker + app server) |
-| `health-check-localdev.sh` | Verify local services are running correctly |
-| `health-check-remote.sh` | Check remote AWS infrastructure health |
-| `api-load-test.sh` | Simple HTTP load testing with `curl` |
-| `gpu-check.sh` | Detect GPU availability (NVIDIA) |
-| `docker-cleanup.sh` | Prune unused Docker resources |
-| `docker-logs.sh` | Tail Docker Compose service logs |
-| `db-reset.sh` | Drop/create/migrate/seed database |
-| `port-check.sh` | Check port listeners, show PID/process |
-| `sync-env.sh` | Copy `.env.example` to `.env` where missing |
-
-### maintenance
-
-Repository housekeeping tools.
-
-| Script | Purpose | Type |
-|---|---|---|
-| `git-cleanup.sh` | Delete merged local branches | Drop-in |
-| `lint-all.sh` | Run `bash -n` + `shellcheck` on all scripts | Drop-in |
-| `make-scripts-executable.sh` | `chmod +x` all `.sh` files | Drop-in |
-| `remove-zone-identifier.sh` | Remove Windows Zone.Identifier ADS files | Drop-in |
-| `scan-secrets.sh` | Scan for accidentally committed secrets | Drop-in |
-
-### tools
-
-Tool installation scripts.
-
-| Script | Purpose |
-|---|---|
-| `install-bats-core.sh` | Install bats-core test framework |
-| `install-ollama.sh` | Install Ollama for local LLM inference |
-| `install-starship.sh` | Install Starship cross-shell prompt |
-| `uninstall-ollama.sh` | Uninstall Ollama |
-| `uninstall-starship.sh` | Uninstall Starship |
+| `aws-cli.sh` | AWS CLI install/login helpers |
+| `terraform.sh` | Terraform wrapper |
+| `s3-sync.sh` | Sync build artifacts to S3 |
+| `cloudfront-invalidate.sh` | Invalidate CloudFront cache |
+| `secrets-manager-get.sh` | Fetch secrets |
+| `secrets-manager-set.sh` | Write secrets |
+| `secrets-manager-health-check.sh` | Verify required secrets exist |
+| `health-check.sh` | Remote AWS infrastructure health checks |
 
 ### stacks
 
-Language-specific scripts organized by stack. Each stack is independently copyable - grab just the directory you need. All scripts source `lib/stacks/_common.sh` for shared helpers, colors, and `.env` loading.
+`lib/stacks/` remains the canonical stack layer for:
+- `node/`, `php/`, `python/`, `rust/` setup/dependencies/preflight/verify
+- `go/` database utilities
 
-#### stacks/php
-
-PHP project setup, dependency management, and quality gates.
-
-**Prerequisites:** PHP 8.2+, Composer
+### maintenance
 
 | Script | Purpose |
 |---|---|
-| `setup.sh` | First-time PHP project setup (prerequisites, .env, composer install) |
-| `verify.sh` | Verify PHP tools and dependencies are installed correctly |
-| `dependencies-install.sh` | Install PHP dependencies from `composer.lock` |
-| `dependencies-update.sh` | Update PHP dependencies + security audit + PHPUnit smoke test |
-| `preflight-checks.sh` | PHP quality gates: CS-Fixer, PHPStan, PHPMD, PHPUnit, coverage, mutation |
-| `check-complexity.php` | Measure PHP function cyclomatic complexity (token-based, drop-in) |
+| `git-cleanup.sh` | Delete merged local branches |
+| `make-scripts-executable.sh` | Restore executable bits |
+| `remove-zone-identifier.sh` | Remove Zone.Identifier files |
+| `scan-secrets.sh` | Scan for accidentally committed secrets |
 
-#### stacks/python
-
-Python project setup, dependency management, and quality gates.
-
-**Prerequisites:** Python 3.12+, pip3
+### tools
 
 | Script | Purpose |
 |---|---|
-| `setup.sh` | First-time Python project setup (prerequisites, .env, venv, pip install) |
-| `verify.sh` | Verify Python tools, venv, and dependencies are installed correctly |
-| `dependencies-install.sh` | Create venv + install from `requirements.txt` |
-| `dependencies-update.sh` | Upgrade pip packages + audit + syntax check |
-| `preflight-checks.sh` | Python quality gates: syntax check, ruff, pytest, Docker Compose |
+| `install-bats-core.sh` | Install bats-core |
+| `install-ollama.sh` / `uninstall-ollama.sh` | Manage Ollama |
+| `install-starship.sh` / `uninstall-starship.sh` | Manage Starship |
 
-#### stacks/go
-
-Go project database management scripts using `golang-migrate` and raw SQL.
-
-**Prerequisites:** Go, `golang-migrate` CLI, PostgreSQL client tools
+### codegen
 
 | Script | Purpose |
 |---|---|
-| `rebuild-database.sh` | Drop all tables, run migrations, seed data |
-| `db-migrate-rollback.sh` | Safe migration rollback with backup and dry-run |
-| `seed-data.sh` | Seed database with sample/development data |
+| `generate-code-map.sh` | Generate an annotated repository tree |
 
-## AI Agent Context
+### dashboard
 
-Context files for AI coding assistants: `CLAUDE.md` (Claude Code), `AGENTS.md` (GitHub Copilot / generic), `GEMINI.md` (Gemini CLI).
-Domain-specific instructions: `.github/instructions/`. Cross-cutting docs: `docs/`.
+| Script | Purpose |
+|---|---|
+| `dashboard/start-dev.sh` | Launch PHP dashboard UI |
 
-## Contributing
+Dashboard process management no longer depends on the PHP `ext-posix` extension.
 
-1. Fork the repo
-2. Create a feature branch
-3. Use kebab-case for all new script filenames
-4. Add `set -euo pipefail` to all bash scripts
-5. Include a help flag (`--help` or `-h`)
-6. For template scripts, put all project-specific values in a `# ---- CONFIGURATION ----` block at the top
-7. Test on both macOS and Linux where possible
-8. Submit a PR
+## Testing
+
+```bash
+bash -n lib/path/to/script.sh
+shellcheck lib/path/to/script.sh
+./preflight-checks.sh
+```
 
 ## License
 

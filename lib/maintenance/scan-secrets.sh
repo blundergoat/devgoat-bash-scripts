@@ -24,6 +24,10 @@ Usage: $0 [OPTIONS] [PATH]
 Scans for accidentally committed secrets (AWS keys, private keys, tokens,
 passwords). Uses gitleaks if available, falls back to grep-based patterns.
 
+Findings are classified as:
+  REVIEW      High-signal match that likely needs investigation
+  LOW-SIGNAL  Likely non-secret context (comments/help text/placeholders/vars)
+
 OPTIONS:
     -h, --help      Show this help message
     --staged        Scan only staged files (for pre-commit hook use)
@@ -89,7 +93,7 @@ cd "$REPO_ROOT" || exit 1
 SECRET_PATTERNS=(
     # AWS Access Key ID (starts with AKIA)
     'AKIA[0-9A-Z]{16}'
-    # AWS Secret Access Key — only in assignment context (key=value)
+    # AWS Secret Access Key - only in assignment context (key=value)
     '(aws_secret|secret_access_key|AWS_SECRET)\s*[=:]\s*["\x27]?[A-Za-z0-9/+=]{40}'
     # Private keys
     '-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----'
@@ -131,6 +135,45 @@ collect_files() {
             fi
             ;;
     esac
+}
+
+MATCH_REASON=""
+is_low_signal_match() {
+    local file="$1"
+    local line_text="$2"
+    MATCH_REASON=""
+
+    # Comments are noisy for token/secret keyword patterns.
+    if [[ "$line_text" =~ ^[[:space:]]*# ]]; then
+        MATCH_REASON="comment"
+        return 0
+    fi
+
+    # CLI help placeholders: --token <token>, etc.
+    if [[ "$line_text" =~ \<[A-Za-z0-9_-]+\> ]]; then
+        MATCH_REASON="placeholder"
+        return 0
+    fi
+
+    # Variable references are usually wiring, not embedded secrets.
+    if [[ "$line_text" == *"\${"* ]] || [[ "$line_text" == *'BASH_REMATCH'* ]] || [[ "$line_text" =~ \$[A-Za-z_][A-Za-z0-9_]* ]]; then
+        MATCH_REASON="variable reference"
+        return 0
+    fi
+
+    # Help text docs often mention bearer tokens without containing one.
+    if [[ "$line_text" =~ [Bb]earer[[:space:]]+token ]]; then
+        MATCH_REASON="help/documentation text"
+        return 0
+    fi
+
+    # Pattern list in this scanner can self-match.
+    if [[ "$file" == "lib/maintenance/scan-secrets.sh" ]]; then
+        MATCH_REASON="scanner pattern definition"
+        return 0
+    fi
+
+    return 1
 }
 
 FILES=()
@@ -191,32 +234,60 @@ fi
 info "Using grep-based patterns (install gitleaks for better detection)"
 echo ""
 
-findings=0
+review_findings=0
+low_signal_findings=0
+review_files=0
+low_signal_files=0
+declare -A review_file_seen=()
+declare -A low_signal_file_seen=()
 
 for file in "${FILES[@]}"; do
     [[ ! -f "$file" ]] && continue
 
     # Use grep -P for Perl-compatible regex, fall back to -E
     match_output=""
-    if grep -PnH "$COMBINED_PATTERN" "$file" 2>/dev/null; then
-        match_output=$(grep -PnH "$COMBINED_PATTERN" "$file" 2>/dev/null)
-    elif grep -EnH "(AKIA[0-9A-Z]{16}|-----BEGIN.*PRIVATE KEY-----|ghp_[A-Za-z0-9]{36})" "$file" 2>/dev/null; then
-        match_output=$(grep -EnH "(AKIA[0-9A-Z]{16}|-----BEGIN.*PRIVATE KEY-----|ghp_[A-Za-z0-9]{36})" "$file" 2>/dev/null)
+    if match_output=$(grep -PnH "$COMBINED_PATTERN" "$file" 2>/dev/null); then
+        :
+    elif match_output=$(grep -EnH "(AKIA[0-9A-Z]{16}|-----BEGIN.*PRIVATE KEY-----|ghp_[A-Za-z0-9]{36})" "$file" 2>/dev/null); then
+        :
     fi
 
     if [[ -n "$match_output" ]]; then
         while IFS= read -r line; do
-            echo -e "\033[31mFOUND:\033[0m $line"
+            line_text="${line#*:}"
+            line_text="${line_text#*:}"
+            if is_low_signal_match "$file" "$line_text"; then
+                echo -e "\033[33mLOW-SIGNAL:\033[0m $line \033[2m($MATCH_REASON)\033[0m"
+                low_signal_findings=$((low_signal_findings + 1))
+                if [[ -z "${low_signal_file_seen[$file]:-}" ]]; then
+                    low_signal_file_seen["$file"]=1
+                    low_signal_files=$((low_signal_files + 1))
+                fi
+            else
+                echo -e "\033[31mREVIEW:\033[0m $line"
+                review_findings=$((review_findings + 1))
+                if [[ -z "${review_file_seen[$file]:-}" ]]; then
+                    review_file_seen["$file"]=1
+                    review_files=$((review_files + 1))
+                fi
+            fi
         done <<< "$match_output"
-        findings=$((findings + 1))
     fi
 done
 
 echo ""
 
-if [[ $findings -gt 0 ]]; then
-    err "Potential secrets detected in $findings file(s). Review before committing."
+if [[ $review_findings -gt 0 ]]; then
+    err "INVESTIGATION REQUIRED: $review_findings high-signal match(es) in $review_files file(s)."
+    if [[ $low_signal_findings -gt 0 ]]; then
+        warn "$low_signal_findings additional low-signal match(es) in $low_signal_files file(s) were also found."
+    fi
     exit 1
 else
-    info "No secrets found"
+    if [[ $low_signal_findings -gt 0 ]]; then
+        warn "No high-signal secrets found. $low_signal_findings low-signal match(es) in $low_signal_files file(s)."
+        info "No investigation required for low-signal-only results unless context looks suspicious."
+    else
+        info "No secrets found"
+    fi
 fi
