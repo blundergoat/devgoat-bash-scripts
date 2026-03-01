@@ -14,7 +14,6 @@ STRICT_EXCEPTIONS=(
     "lib/stacks/*/verify.sh"
     "lib/stacks/*/preflight-checks.sh"
     "lib/health/check-gpu.sh"
-    "lib/health/check-local.sh"
 )
 
 # Library files that don't need their own strict mode

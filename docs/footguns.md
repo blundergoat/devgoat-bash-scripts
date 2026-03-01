@@ -15,7 +15,6 @@ Cross-domain gotchas discovered in this codebase. When you cause a bug that span
 | `lib/stacks/*/verify.sh` | Runs all prerequisite checks, reports summary at end |
 | `lib/stacks/*/preflight-checks.sh` | Runs quality gates, must report all failures |
 | `lib/health/check-gpu.sh` | Probes multiple GPU backends, some will always fail |
-| `lib/health/check-local.sh` | Checks multiple services, reports combined health status |
 
 **Prevention:** Before adding `set -e` to any script, check if it uses `step`/`pass`/`fail` patterns or accumulates failures in an array. If it does, omitting `-e` is intentional.
 
@@ -25,7 +24,7 @@ Cross-domain gotchas discovered in this codebase. When you cause a bug that span
 
 **Symptoms:** A script resolves a Windows binary (e.g., `/mnt/c/Program Files/nodejs/npm`) instead of the native Linux one. Commands appear to exist but produce wrong output or fail cryptically.
 
-**Why it happens:** Only `lib/ai-cli/_common.sh` sanitizes PATH for WSL (via `sanitize_path_for_wsl()` and `command_exists()`). Scripts in other domains (`aws/`, `dev/`, `stacks/`) use bare `command -v` checks, which can resolve Windows binaries leaking into WSL's PATH through `/mnt/*` entries.
+**Why it happens:** Only `lib/ai-cli/_common.sh` sanitizes PATH for WSL (via `sanitize_path_for_wsl()` and `command_exists()`). Other domains use bare `command -v` checks, which can resolve Windows binaries leaking into WSL's PATH through `/mnt/*` entries.
 
 **Prevention:** When writing scripts that run on WSL and depend on native Linux binaries (node, npm, python, aws, docker), either source `ai-cli/_common.sh` or add an explicit `/mnt/*` rejection check. At minimum, document the WSL assumption.
 

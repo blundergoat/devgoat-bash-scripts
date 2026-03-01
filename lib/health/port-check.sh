@@ -57,7 +57,7 @@ KILL_MODE=false
 PORTS=()
 
 # Common development ports (used when no ports specified)
-DEFAULT_PORTS=(3000 3306 5432 6379 8000 8080 8081 8082 8899 11434)
+DEFAULT_PORTS=(3000 3306 3706 5432 6379 8000 8080 8081 8082 8086 8087 8899 11434 11436)
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
