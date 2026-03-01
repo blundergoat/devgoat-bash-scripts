@@ -26,24 +26,26 @@ passwords). Uses gitleaks if available, falls back to grep-based patterns.
 
 OPTIONS:
     -h, --help      Show this help message
-    --staged        Scan only staged files (default, for pre-commit hook use)
-    --all           Scan all files tracked by git
+    --staged        Scan only staged files (for pre-commit hook use)
+    --all           Scan all files tracked by git (default)
     -n, --dry-run   Show what would be scanned without scanning
 
 ARGUMENTS:
     PATH            Scan a specific file or directory
 
 EXAMPLES:
-    $0                          # Scan staged files (pre-commit)
-    $0 --all                    # Scan entire repo
+    $0                          # Scan all tracked files
+    $0 --staged                 # Scan only staged files (pre-commit)
     $0 lib/aws/                 # Scan specific directory
     $0 --staged                 # Explicitly scan staged files
 EOF
 }
 
 # Default values
-REPO_ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || (cd "$(dirname "$0")/../.." && pwd))"
-SCAN_MODE="staged"
+# Use the git root of the cwd (set by the dashboard to the selected project),
+# falling back to the git root of the script's own location.
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || { cd "$(dirname "$0")/../.." && pwd; })"
+SCAN_MODE="all"
 TARGET_PATH=""
 DRY_RUN=false
 
@@ -81,16 +83,18 @@ done
 
 cd "$REPO_ROOT" || exit 1
 
-# Secret patterns (grep -E extended regex)
+# Secret patterns (grep -P perl-compatible regex)
+# Kept intentionally high-confidence to reduce false positives.
+# Install gitleaks for entropy-based detection of broader secret types.
 SECRET_PATTERNS=(
     # AWS Access Key ID (starts with AKIA)
     'AKIA[0-9A-Z]{16}'
-    # AWS Secret Access Key (40 char base64)
-    '(?<![A-Za-z0-9/+=])[A-Za-z0-9/+=]{40}(?![A-Za-z0-9/+=])'
+    # AWS Secret Access Key — only in assignment context (key=value)
+    '(aws_secret|secret_access_key|AWS_SECRET)\s*[=:]\s*["\x27]?[A-Za-z0-9/+=]{40}'
     # Private keys
     '-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----'
-    # Generic high-entropy tokens assigned to variables
-    '(password|passwd|secret|token|api_key|apikey|access_key)[\s]*[=:][\s]*["\x27][^\s"'\'']{8,}'
+    # Generic secrets assigned to variables (password/token/key = "value")
+    '(password|passwd|secret|token|api_key|apikey|access_key)\s*[=:]\s*["\x27][^\s"'\'']{8,}'
     # GitHub personal access tokens
     'ghp_[A-Za-z0-9]{36}'
     # Generic Bearer tokens
@@ -201,10 +205,9 @@ for file in "${FILES[@]}"; do
     fi
 
     if [[ -n "$match_output" ]]; then
-        echo "$match_output" | while IFS= read -r line; do
+        while IFS= read -r line; do
             echo -e "\033[31mFOUND:\033[0m $line"
-            findings=$((findings + 1))
-        done
+        done <<< "$match_output"
         findings=$((findings + 1))
     fi
 done

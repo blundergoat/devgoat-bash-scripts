@@ -1,6 +1,6 @@
 # Code Map
 
-Repository tree with annotations. Most scripts live under `lib/`; `preflight-checks.sh` lives at the repo root.
+Repository tree with annotations. Most scripts live under `lib/`; `help.sh` and `preflight-checks.sh` live at the repo root.
 
 ```
 lib/
@@ -34,37 +34,34 @@ lib/
 │   ├── secrets-manager-set.sh       # Create/update secrets
 │   └── terraform.sh                 # Terraform init/plan/apply with S3 backend
 │
-├── codegen/                         # Code generation utilities (2 scripts)
-│   ├── generate-api-client.sh       # TypeScript API client from OpenAPI spec (template)
+├── codegen/                         # Code generation utilities (1 script)
 │   └── generate-code-map.sh         # Directory tree / deep file-contents map (drop-in)
 │
 ├── dev/                             # Local development workflow (10 scripts)
 │   ├── api-load-test.sh             # HTTP load testing with curl (template)
 │   ├── db-reset.sh                  # Drop/create/migrate/seed database (template)
-│   ├── dev-logs.sh                  # Tail and aggregate dev logs (template)
 │   ├── docker-cleanup.sh            # Prune unused Docker resources (drop-in)
 │   ├── docker-logs.sh               # Tail Docker Compose service logs (template)
 │   ├── gpu-check.sh                 # Detect GPU — NVIDIA (drop-in, omits -e)
 │   ├── health-check-localdev.sh     # Verify local services (template, omits -e)
 │   ├── health-check-remote.sh       # Check remote AWS health (template)
 │   ├── port-check.sh                # Check port listeners, show PID/process (drop-in)
-│   └── start-dev.sh                 # Start local dev environment (template, omits -e)
+│   ├── start-dev.sh                 # Start local dev environment (template, omits -e)
+│   └── sync-env.sh                  # Copy .env.example → .env where missing (template)
 │
-├── maintenance/                     # Repo housekeeping (7 scripts, all drop-in)
+├── maintenance/                     # Repo housekeeping (5 scripts, all drop-in)
 │   ├── git-cleanup.sh               # Delete merged local branches
 │   ├── lint-all.sh                  # Run bash -n + shellcheck on all scripts (omits -e)
 │   ├── make-scripts-executable.sh   # chmod +x all .sh files
 │   ├── remove-zone-identifier.sh    # Remove Windows Zone.Identifier ADS files
-│   ├── scan-secrets.sh              # Scan for accidentally committed secrets
-│   ├── update-all.sh                # git pull --rebase + restore executable bits
-│   └── verify-checksums.sh          # Verify file integrity via SHA-256 manifest
+│   └── scan-secrets.sh              # Scan for accidentally committed secrets
 │
-├── setup/                           # Tool installation (5 scripts)
-│   ├── install-bats-core.sh         # Install bats-core test framework (drop-in)
-│   ├── install-bats.sh              # Compatibility shim → install-bats-core.sh (deprecated)
+├── tools/                           # Tool installation (5 scripts, all drop-in)
+│   ├── install-bats-core.sh         # Install bats-core test framework
 │   ├── install-ollama.sh            # Install Ollama for local LLM inference
-│   ├── sync-env.sh                  # Copy .env.example → .env where missing (template)
-│   └── uninstall-ollama.sh          # Uninstall Ollama
+│   ├── install-starship.sh          # Install Starship cross-shell prompt
+│   ├── uninstall-ollama.sh          # Uninstall Ollama
+│   └── uninstall-starship.sh        # Uninstall Starship
 │
 └── stacks/                          # Language-specific setup, deps, quality gates
     ├── _common.sh                   # Shared library: colors, symbols, counters, step/pass/fail,
@@ -94,6 +91,13 @@ lib/
         └── verify.sh                # Verify Python tools installed (omits -e)
 ```
 
+**Root:** `help.sh` — categorized listing of all available scripts (repo root, not under `lib/`)
 **Root:** `preflight-checks.sh` — project-wide validation entry point (repo root, not under `lib/`)
 
-**Total:** 68 files (66 shell scripts + 1 PHP script + 1 root preflight script)
+**Dashboard** (`dashboard/`):
+- `start-dev.sh` — PHP dashboard launcher (template)
+- `index.php` — Router, API handlers, localhost guard, process management
+- `frontend.php` — Single-page HTML/CSS/JS UI (inline, no build step)
+- `config.example.php` — Sample script registry with schema docs
+
+**Total:** 69 shell scripts + 4 PHP files across `lib/`, root, and `dashboard/`

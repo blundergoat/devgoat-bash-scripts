@@ -4,16 +4,17 @@ A collection of reusable shell scripts for project setup, development workflows,
 
 ## Directory Overview
 
-All scripts live under `lib/` to keep the repo root clean.
+All scripts live under `lib/` to keep the repo root clean. Two root-level tools - `help.sh` (script listing) and `preflight-checks.sh` (quality gate) - live at the repo root for quick access.
 
 | Directory | Description |
 |---|---|
 | [`lib/ai-cli/`](#ai-cli) | AI coding assistant installers and uninstallers |
 | [`lib/aws/`](#aws) | AWS CLI, Terraform, ECR/ECS deploy, Secrets Manager, Amplify |
-| [`lib/codegen/`](#codegen) | Code map generator, API client scaffolding |
+| [`lib/codegen/`](#codegen) | Code map generator |
+| [`dashboard/`](#dashboard) | PHP script-runner web UI with project switcher |
 | [`lib/dev/`](#dev) | Local dev server, logs, health checks, load testing |
 | [`lib/maintenance/`](#maintenance) | Repo housekeeping (permissions, Zone.Identifier cleanup) |
-| [`lib/setup/`](#setup) | Ollama install/uninstall |
+| [`lib/tools/`](#tools) | Tool installers (Ollama, Starship, bats-core) |
 | [`lib/stacks/`](#stacks) | Language-specific setup, deps, quality gates (PHP, Python, Go) |
 
 ## Quick Start
@@ -21,6 +22,9 @@ All scripts live under `lib/` to keep the repo root clean.
 ```bash
 git clone https://github.com/blundergoat/devgoat-bash-scripts.git
 cd devgoat-bash-scripts
+
+# See all available scripts
+./help.sh
 
 # Run any script directly
 ./lib/ai-cli/install-claude.sh
@@ -35,18 +39,17 @@ cp -r lib/stacks/php/ my-project/scripts/
 
 Scripts fall into two categories:
 
-**Drop-in** — Run as-is with no configuration. These are standalone tools:
+**Drop-in** - Run as-is with no configuration. These are standalone tools:
 - All `lib/ai-cli/` installers/uninstallers
 - `lib/codegen/generate-code-map.sh`
 - `lib/stacks/php/check-complexity.php`
 - `lib/maintenance/make-scripts-executable.sh`
 - `lib/maintenance/remove-zone-identifier.sh`
 
-**Template** — Require a `# ---- CONFIGURATION ----` block at the top with project-specific values. Copy into your project and fill in the variables:
+**Template** - Require a `# ---- CONFIGURATION ----` block at the top with project-specific values. Copy into your project and fill in the variables:
 - All `lib/aws/` scripts
 - All `lib/stacks/` scripts (except `check-complexity.php`)
-- All `lib/dev/` scripts
-- `lib/codegen/generate-api-client.sh`
+- All `lib/dev/` scripts (except `sync-env.sh`)
 
 Template scripts use environment variable fallbacks (`${VAR:-default}`) so you can either edit the defaults in the script or override them via environment variables.
 
@@ -94,7 +97,19 @@ Code generation and analysis utilities.
 | Script | Purpose | Type |
 |---|---|---|
 | `generate-code-map.sh` | Generate directory tree or deep file-contents map for a path | Drop-in |
-| `generate-api-client.sh` | Generate TypeScript API client from OpenAPI spec | Template |
+
+### dashboard
+
+PHP-based web UI for running project scripts from the browser. Localhost-only - the PHP guard returns HTTP 403 for any non-localhost request. Includes a WSL path selector for running scripts against any local project.
+
+**Prerequisites:** PHP 8.1+ with posix extension, `script(1)` command
+
+| File | Purpose | Type |
+|---|---|---|
+| `start-dev.sh` | Launch the PHP dashboard server on localhost | Template |
+| `index.php` | Router, API handlers, localhost guard, process management | PHP |
+| `frontend.php` | Single-page HTML/CSS/JS UI with project switcher | PHP |
+| `config.example.php` | Sample script registry and project list | PHP |
 
 ### dev
 
@@ -103,7 +118,6 @@ Local development workflow scripts.
 | Script | Purpose |
 |---|---|
 | `start-dev.sh` | Start local dev environment (Docker + app server) |
-| `dev-logs.sh` | Tail and aggregate development logs |
 | `health-check-localdev.sh` | Verify local services are running correctly |
 | `health-check-remote.sh` | Check remote AWS infrastructure health |
 | `api-load-test.sh` | Simple HTTP load testing with `curl` |
@@ -112,6 +126,7 @@ Local development workflow scripts.
 | `docker-logs.sh` | Tail Docker Compose service logs |
 | `db-reset.sh` | Drop/create/migrate/seed database |
 | `port-check.sh` | Check port listeners, show PID/process |
+| `sync-env.sh` | Copy `.env.example` to `.env` where missing |
 
 ### maintenance
 
@@ -124,10 +139,8 @@ Repository housekeeping tools.
 | `make-scripts-executable.sh` | `chmod +x` all `.sh` files | Drop-in |
 | `remove-zone-identifier.sh` | Remove Windows Zone.Identifier ADS files | Drop-in |
 | `scan-secrets.sh` | Scan for accidentally committed secrets | Drop-in |
-| `update-all.sh` | `git pull --rebase` + restore executable bits | Drop-in |
-| `verify-checksums.sh` | Verify file integrity via SHA-256 manifest | Drop-in |
 
-### setup
+### tools
 
 Tool installation scripts.
 
@@ -135,12 +148,13 @@ Tool installation scripts.
 |---|---|
 | `install-bats-core.sh` | Install bats-core test framework |
 | `install-ollama.sh` | Install Ollama for local LLM inference |
-| `sync-env.sh` | Copy `.env.example` to `.env` where missing |
+| `install-starship.sh` | Install Starship cross-shell prompt |
 | `uninstall-ollama.sh` | Uninstall Ollama |
+| `uninstall-starship.sh` | Uninstall Starship |
 
 ### stacks
 
-Language-specific scripts organized by stack. Each stack is independently copyable — grab just the directory you need. All scripts source `lib/stacks/_common.sh` for shared helpers, colors, and `.env` loading.
+Language-specific scripts organized by stack. Each stack is independently copyable - grab just the directory you need. All scripts source `lib/stacks/_common.sh` for shared helpers, colors, and `.env` loading.
 
 #### stacks/php
 

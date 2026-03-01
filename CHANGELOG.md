@@ -6,7 +6,58 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [v1.1.0] -Unreleased
+## [v1.2.0] - 2026-03-01
+
+### Added
+
+- **`lib/dev/git-status.sh`** - drop-in script showing branch, recent commits, and working tree status.
+- **`lib/dev/git-checkout.sh`** - drop-in script to switch branches with remote tracking support.
+- **Dashboard: Copy button** - copy terminal output to clipboard from the toolbar.
+- **Dashboard: Config banner** - shows a warning when using the unedited example config, with dismiss button.
+- **Dashboard: BlunderGOAT branding** - logo in header, "created by BlunderGOAT" footer link.
+- **Dashboard: Request logging** - `[dashboard] RUN/DONE/STOP` events in terminal output, TCP noise filtered.
+- **Dashboard: Dynamic target badge** - env-badge updates to show the current target project folder name.
+- **Dashboard: Prompt optional flag** - prompts can set `'optional' => true` to allow empty input (e.g. port-check).
+- **Dashboard: Image serving** - route for `/blundergoat-avatar.jpg`.
+- **`dashboard/config.php`** added to `.gitignore` - personal configs stay local.
+
+### Changed
+
+- **`port-check.sh` default ports** - expanded from 5 to 10 common dev ports: 3000, 3306, 5432, 6379, 8000, 8080, 8081, 8082, 8899, 11434 (covers MySQL, Postgres, Redis, PHP/Python dev servers, Go APIs, Ollama).
+- **`port-check.sh` comma-separated input** - accepts `port-check.sh 3306,6379,8080` in addition to space-separated.
+- **`dashboard/start-dev.sh` project name** - default changed from `my-project` to `DevGoat DevEx Dashboard`.
+- **`dashboard/start-dev.sh` SCRIPTS_DIR** - default changed from `scripts` to `.` (project root).
+- **`dashboard/start-dev.sh` logging** - filters PHP built-in server TCP noise, only shows `[dashboard]` tagged events.
+- **`dashboard/config.example.php`** - reorganized into `devgoat-bash-scripts`, `Quick Info`, and `Maintenance` categories with real drop-in scripts. Added git-checkout (with branch prompt) and port-check (with optional ports prompt).
+
+### Fixed
+
+- **`port-check.sh` crash under `set -euo pipefail`** - `grep -oP` returns exit 1 when no `pid=` info available (non-root); added `|| true` to prevent silent script death.
+- **`make-scripts-executable.sh` operator precedence bug** - `git ... || cd ... && pwd` parsed as `(git || cd) && pwd`, causing REPO_ROOT to contain two paths with an embedded newline. Fixed with `{ ...; }` grouping.
+- **`scan-secrets.sh` false positives** - the broad `[A-Za-z0-9/+=]{40}` AWS secret pattern matched `========` separator lines and file paths. Tightened to assignment-context only. Fixed shellcheck subshell counter bug.
+- **`lib/stacks/_common.sh` corrupt shebang** - first line was `e out #!/usr/bin/env bash`; fixed.
+- **`lib/tools/install-starship.sh`** - removed unused `YELLOW` variable (shellcheck SC2034).
+- **`dashboard/start-dev.sh` config.php** - changed from hard-fail to auto-copy from `config.example.php` with warning.
+
+---
+
+## [v1.1.0] - Unreleased
+
+### Added
+
+- **`help.sh`** - root-level script listing all available scripts by domain with aligned descriptions.
+- **`dashboard/start-dev.sh`** - template launcher for the PHP script-runner web UI (localhost-only).
+- **`dashboard/index.php`** - router, API handlers, localhost guard, process management.
+- **`dashboard/frontend.php`** - single-page HTML/CSS/JS UI with WSL path selector for multi-project support.
+- **`dashboard/config.example.php`** - sample script registry with schema docs and project list.
+- **`lib/tools/install-starship.sh`** - install Starship cross-shell prompt.
+- **`lib/tools/uninstall-starship.sh`** - uninstall Starship.
+- **`TODO_dashboard-plan.md`** - decoupling plan for porting the PHP dashboard into `dashboard/`.
+
+### Changed
+
+- **Renamed `lib/setup/` → `lib/tools/`** - clearer name for tool installer scripts.
+- **Moved `sync-env.sh`** from `lib/setup/` to `lib/dev/` - it's a dev workflow template, not a tool installer.
 
 ### Fixed
 
@@ -24,6 +75,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Removed
 
 - **Grok CLI scripts** -Removed `install-grok.sh` and `uninstall-grok.sh`. The upstream `@vibe-kit/grok-cli` package is unmaintained and broken (xAI deprecated the live search API on 2026-01-12, returning HTTP 410).
+- **`lib/setup/install-bats.sh`** - deprecated shim that redirected to `install-bats-core.sh`.
+- **`lib/maintenance/verify-checksums.sh`** - verified against a SHA-256 manifest that didn't exist.
+- **`lib/maintenance/update-all.sh`** - thin wrapper around `git pull --rebase` + `make-scripts-executable.sh`.
+- **`lib/dev/dev-logs.sh`** - tightly coupled to `start-dev.sh` service layout.
+- **`lib/codegen/generate-api-client.sh`** - thin `npx openapi-generator-cli` wrapper.
 
 ### Documentation
 

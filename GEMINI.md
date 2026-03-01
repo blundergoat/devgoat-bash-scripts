@@ -38,7 +38,7 @@ No automated tests. Validate changes by: syntax-checking with `bash -n`, running
 
 **Adding a stacks script:** Source `../_common.sh`. Use `step`/`pass`/`fail`/`summary` for checks, `log_info`/`log_ok` for actions. Omit `-e` if the script must report all failures.
 
-**Adding a standalone script (aws/dev/maintenance/setup/codegen):** Self-contained — define inline colors and `log`/`success`/`warn`/`error` functions. Use `set -euo pipefail`. Add CONFIGURATION block if template.
+**Adding a standalone script (aws/dev/maintenance/tools/codegen):** Self-contained — define inline colors and `log`/`success`/`warn`/`error` functions. Use `set -euo pipefail`. Add CONFIGURATION block if template.
 
 ## Commit Format
 
@@ -54,6 +54,6 @@ Load these files on demand when working in a specific domain:
 | `lib/ai-cli/` | `.github/instructions/ai-cli.instructions.md` | Working on AI CLI installers |
 | `lib/aws/` | `.github/instructions/aws.instructions.md` | Working on AWS scripts |
 | `lib/stacks/` | `.github/instructions/stacks.instructions.md` | Working on stack scripts |
-| `lib/dev/`, `lib/maintenance/`, `lib/setup/`, `lib/codegen/` | `.github/instructions/dev.instructions.md` | Working on dev/maintenance/setup/codegen scripts |
+| `lib/dev/`, `lib/maintenance/`, `lib/tools/`, `lib/codegen/` | `.github/instructions/dev.instructions.md` | Working on dev/maintenance/setup/codegen scripts |
 | Orientation | `docs/code-map.md` | Understanding repo structure |
 | Gotchas | `docs/footguns.md` | Debugging cross-domain issues |

@@ -41,7 +41,7 @@ APP_POST_PATH="${APP_POST_PATH:-/chat}"
 APP_HTML_PATTERN="${APP_HTML_PATTERN:-chat|<html}"
 # ---- END CONFIGURATION ----
 
-REPO_ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || cd "$(dirname "$0")/.." && pwd)"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || { cd "$(dirname "$0")/../.." && pwd; })"
 
 # ── Configurable endpoints ──────────────────────────────────────────
 AGENT_PORT="${AGENT_PORT:-$DEFAULT_AGENT_PORT}"
