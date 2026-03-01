@@ -2,8 +2,23 @@
 
 /**
  * Frontend (HTML/CSS/JS)
+ *
+ * Renders the entire single-page dashboard as inline HTML/CSS/JS.
+ * No external files or build step - everything is emitted by this function.
+ *
+ * Layout:
+ *   Header     - project title, logo, project selector, env badge, theme toggle
+ *   Sidebar    - categorized script buttons loaded from config.php
+ *   Terminal   - ANSI-colored output streamed via SSE from /api/stream/{id}
+ *   Modal      - confirmation dialogs and prompt inputs before running scripts
+ *
+ * Theme: light/dark toggle persisted in localStorage ('devex_dash_theme').
+ * Project: target directory persisted in localStorage ('devex_dash_project').
  */
 
+/**
+ * @return void
+ */
 function serveDashboardHtml(): void
 {
     header('Content-Type: text/html; charset=UTF-8');
@@ -311,9 +326,12 @@ CSS;
     echo '      </select>';
     echo '      <input type="text" class="project-custom-input hidden" id="projectCustomInput" placeholder="/path/to/project" onkeydown="if(event.key===\'Enter\')applyCustomProject()" onblur="applyCustomProject()">';
     echo '    </div>';
-    if (SITE_URL !== '') {
-        $siteUrl = htmlspecialchars(SITE_URL, ENT_QUOTES);
-        $siteLabel = htmlspecialchars(parse_url(SITE_URL, PHP_URL_HOST) ?: SITE_URL, ENT_QUOTES);
+    /** @var string $siteUrlConst */
+    $siteUrlConst = SITE_URL;
+    if ($siteUrlConst !== '') {
+        $siteUrl = htmlspecialchars($siteUrlConst, ENT_QUOTES);
+        $parsedHost = parse_url($siteUrlConst, PHP_URL_HOST);
+        $siteLabel = htmlspecialchars(is_string($parsedHost) ? $parsedHost : $siteUrlConst, ENT_QUOTES);
         echo '    <a class="site-link" href="' . $siteUrl . '" target="_blank">' . $siteLabel . '</a>';
     }
     echo '    <span class="env-badge" id="envBadge" title="' . htmlspecialchars(SCRIPTS_DIR, ENT_QUOTES) . '"><span class="dot"></span><span id="envBadgeText">' . $defaultDir . '</span></span>';
@@ -384,13 +402,13 @@ applyThemeIcons();
  */
 
 let state = {
-    scripts: [],
-    timings: {},
-    runningId: null,
-    runningScriptId: null,
-    eventSource: null,
-    autoScroll: true,
-    pendingCallback: null,
+    scripts: [],           // category/script tree from /api/scripts
+    timings: {},           // scriptId → last run duration in seconds
+    runningId: null,       // unique run ID (e.g. "port-check-143022") or null when idle
+    runningScriptId: null, // script ID from config (e.g. "port-check") or null when idle
+    eventSource: null,     // active EventSource for SSE streaming, null when idle
+    autoScroll: true,      // auto-scroll terminal to bottom on new output
+    pendingCallback: null, // callback to execute when modal is confirmed, null when no modal
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -404,24 +422,30 @@ const scriptLabel = $('#scriptLabel');
  */
 
 async function init() {
-    const [resp, timingsResp] = await Promise.all([
-        fetch('/api/scripts'),
-        fetch('/api/timings'),
-    ]);
-    state.scripts = await resp.json();
-    state.timings = await timingsResp.json();
-    renderSidebar();
+    try {
+        // Load script registry and timing data in parallel
+        const [scriptsResp, timingsResp] = await Promise.all([
+            fetch('/api/scripts'),
+            fetch('/api/timings'),
+        ]);
+        state.scripts = await scriptsResp.json();
+        state.timings = await timingsResp.json();
+        renderSidebar();
 
-    // Load project list and restore selection
-    await loadProjects();
+        // Load project list and restore saved selection from localStorage
+        await loadProjects();
 
-    const status = await fetch('/api/status');
-    const data = await status.json();
-    if (data.running) {
-        state.runningId = data.id;
-        state.runningScriptId = data.script_id;
-        setRunningState(true, data.script);
-        connectStream(data.id);
+        // Check if a script is already running (e.g. page was refreshed mid-run)
+        const statusResp = await fetch('/api/status');
+        const statusData = await statusResp.json();
+        if (statusData.running) {
+            state.runningId = statusData.id;
+            state.runningScriptId = statusData.script_id;
+            setRunningState(true, statusData.script);
+            connectStream(statusData.id);
+        }
+    } catch (err) {
+        appendToTerminal(`<span class="ansi-red">Failed to load dashboard: ${esc(String(err))}</span>\n`);
     }
 }
 
@@ -473,8 +497,9 @@ function updateButtons() {
  * Script execution
  */
 
+/** Handle sidebar script button click - show modal if needed, or run directly. */
 function onScriptClick(script) {
-    if (state.runningId) return;
+    if (state.runningId) return; // ignore clicks while a script is running
     if (script.confirm) { showConfirm(script); return; }
     if (script.prompt) { showPrompt(script); return; }
     runScript(script.id);
@@ -483,36 +508,51 @@ function onScriptClick(script) {
 async function runScript(scriptId, arg) {
     const body = { script: scriptId };
     if (arg !== undefined) body.arg = arg;
+    // Attach the selected project path so the script runs in that directory
     const project = localStorage.getItem('devex_dash_project');
     if (project) body.project = project;
     clearTerminal();
 
-    const resp = await fetch('/api/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-    });
-    const data = await resp.json();
-    if (data.error) {
-        appendToTerminal(`<span class="ansi-red">Error: ${esc(data.error)}</span>\n`);
-        return;
-    }
-
-    state.runningId = data.id;
-    state.runningScriptId = scriptId;
-    state.startedAt = Date.now();
-
-    let label = scriptId;
-    for (const cat of state.scripts) {
-        for (const s of cat.scripts) {
-            if (s.id === scriptId) { label = s.cmd + (s.args ? ' ' + s.args.join(' ') : ''); break; }
+    try {
+        const resp = await fetch('/api/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await resp.json();
+        if (data.error) {
+            appendToTerminal(`<span class="ansi-red">Error: ${esc(data.error)}</span>\n`);
+            return;
         }
+
+        state.runningId = data.id;
+        state.runningScriptId = scriptId;
+        state.startedAt = Date.now();
+
+        // Resolve the display label (show cmd + args rather than just the script ID)
+        let label = scriptId;
+        for (const cat of state.scripts) {
+            for (const s of cat.scripts) {
+                if (s.id === scriptId) { label = s.cmd + (s.args ? ' ' + s.args.join(' ') : ''); break; }
+            }
+        }
+        setRunningState(true, label);
+        connectStream(data.id);
+    } catch (err) {
+        appendToTerminal(`<span class="ansi-red">Failed to start script: ${esc(String(err))}</span>\n`);
     }
-    setRunningState(true, label);
-    connectStream(data.id);
 }
 
+/**
+ * Open an SSE connection to stream script output into the terminal.
+ *
+ * Events:
+ *   output    - a chunk of ANSI-converted HTML to append
+ *   done      - script finished, show duration and reset UI
+ *   heartbeat - keepalive, ignored
+ */
 function connectStream(id) {
+    // Close any existing stream (shouldn't happen, but defensive)
     if (state.eventSource) state.eventSource.close();
 
     const es = new EventSource(`/api/stream/${id}`);
@@ -521,8 +561,8 @@ function connectStream(id) {
     es.addEventListener('output', (e) => appendToTerminal(e.data));
 
     es.addEventListener('done', () => {
-        const elapsed = state.startedAt ? ((Date.now() - state.startedAt) / 1000) : 0;
-        const duration = elapsed < 1 ? '<1s' : elapsed < 60 ? Math.round(elapsed) + 's' : Math.floor(elapsed/60) + 'm ' + Math.round(elapsed%60) + 's';
+        const elapsedSecs = state.startedAt ? ((Date.now() - state.startedAt) / 1000) : 0;
+        const duration = elapsedSecs < 1 ? '<1s' : elapsedSecs < 60 ? Math.round(elapsedSecs) + 's' : Math.floor(elapsedSecs/60) + 'm ' + Math.round(elapsedSecs%60) + 's';
         appendToTerminal(`\n<span class="ansi-green ansi-bold">\u2714 Done</span> <span class="ansi-dim">in ${duration}</span>\n`);
         setRunningState(false, null, duration);
         es.close();
@@ -532,9 +572,11 @@ function connectStream(id) {
         updateButtons();
     });
 
-    es.addEventListener('heartbeat', () => {});
+    es.addEventListener('heartbeat', () => {}); // keepalive - no action needed
 
     es.onerror = () => {
+        // EventSource auto-reconnects on error; if the connection is truly closed
+        // (server ended the stream), wait 2s then clean up the UI state
         setTimeout(() => {
             if (es.readyState === EventSource.CLOSED) {
                 setRunningState(false);
@@ -558,6 +600,13 @@ async function stopScript() {
     }
 }
 
+/**
+ * Update the toolbar and sidebar to reflect running/idle state.
+ *
+ * When running: shows the command label with a live elapsed timer.
+ * When done with a duration: shows "$ command 12s ✔ Done".
+ * When idle (no duration): shows "Ready".
+ */
 function setRunningState(running, label, completedDuration) {
     stopBtn.disabled = !running;
     stopBtn.textContent = 'Stop';
@@ -565,6 +614,7 @@ function setRunningState(running, label, completedDuration) {
     if (running) {
         state.lastLabel = label;
         scriptLabel.innerHTML = `$ <strong>${esc(label || '')}</strong> <span id="elapsed" class="ansi-dim"></span>`;
+        // Live elapsed timer - updates every second while script runs
         state.timerInterval = setInterval(() => {
             const el = document.getElementById('elapsed');
             if (!el || !state.startedAt) return;
@@ -572,6 +622,7 @@ function setRunningState(running, label, completedDuration) {
             el.textContent = s < 60 ? s + 's' : Math.floor(s/60) + 'm ' + (s%60) + 's';
         }, 1000);
     } else if (state.lastLabel && completedDuration) {
+        // Script just finished - show the final duration
         scriptLabel.innerHTML = `$ ${esc(state.lastLabel)} <span class="ansi-dim">${esc(completedDuration)}</span> <span class="ansi-green">\u2714 Done</span>`;
     } else {
         scriptLabel.textContent = 'Ready';
@@ -583,21 +634,28 @@ function setRunningState(running, label, completedDuration) {
  * Terminal
  */
 
+/** Append HTML content to the terminal, removing the welcome message on first output. */
 function appendToTerminal(html) {
     const welcome = terminal.querySelector('.welcome');
-    if (welcome) welcome.remove();
+    if (welcome) welcome.remove(); // clear placeholder on first real output
     const span = document.createElement('span');
     span.innerHTML = html;
     terminal.appendChild(span);
-    if (state.autoScroll) terminal.scrollTop = terminal.scrollHeight;
+    // Defer scroll until after the browser paints the new content
+    if (state.autoScroll) {
+        requestAnimationFrame(() => { terminal.scrollTop = terminal.scrollHeight; });
+    }
 }
 
+// Disable auto-scroll when user scrolls up to read earlier output.
+// Re-enable when they scroll back to the bottom (within 50px threshold).
 terminal.addEventListener('scroll', () => {
     state.autoScroll = terminal.scrollTop + terminal.clientHeight >= terminal.scrollHeight - 50;
 });
 
 function clearTerminal() { terminal.innerHTML = ''; }
 
+/** Copy terminal text content to clipboard (strips HTML/ANSI spans). */
 function copyOutput() {
     const text = terminal.innerText;
     if (!text.trim()) return;
@@ -612,8 +670,10 @@ function copyOutput() {
  * Modal
  */
 
+/** Show a confirmation dialog before running a destructive or slow script. */
 function showConfirm(script) {
     $('#modalTitle').textContent = 'Confirm: ' + script.name;
+    // Show timing info: prefer recorded duration from last run, fall back to estimated
     const recordedSecs = state.timings[script.id];
     const estimatedMins = script.estimatedMins;
     let timing = '';
@@ -637,21 +697,30 @@ function formatDuration(secs) {
     return s > 0 ? `${m}m ${s}s` : `${m}m`;
 }
 
+/**
+ * Show a prompt modal for scripts that need user input before running.
+ *
+ * Supports two prompt types from config.php:
+ *   type: 'select'  - dropdown with predefined options
+ *   type: 'text'    - free-form text input
+ *
+ * The optional flag allows submitting an empty value (for optional args).
+ */
 function showPrompt(script) {
-    const p = script.prompt;
+    const promptConfig = script.prompt;
     $('#modalTitle').textContent = script.name;
-    if (p.type === 'select') {
-        $('#modalBody').innerHTML = `<label>${esc(p.label)}</label><select id="modalInput">` +
-            p.options.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('') + `</select>`;
+    if (promptConfig.type === 'select') {
+        $('#modalBody').innerHTML = `<label>${esc(promptConfig.label)}</label><select id="modalInput">` +
+            promptConfig.options.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('') + `</select>`;
     } else {
-        $('#modalBody').innerHTML = `<label>${esc(p.label)}</label><input type="text" id="modalInput" placeholder="${esc(p.label)}" autofocus>`;
+        $('#modalBody').innerHTML = `<label>${esc(promptConfig.label)}</label><input type="text" id="modalInput" placeholder="${esc(promptConfig.label)}" autofocus>`;
     }
     $('#modalConfirm').textContent = 'Run';
-    const optional = p.optional || false;
+    const isOptional = promptConfig.optional || false;
     state.pendingCallback = () => {
         const val = $('#modalInput').value.trim();
-        if (!val && !optional) return;
-        runScript(script.id, val || undefined);
+        if (!val && !isOptional) return; // required input can't be empty
+        runScript(script.id, val || undefined); // undefined = don't send arg field
     };
     $('#modalOverlay').classList.add('open');
     setTimeout(() => { const inp = $('#modalInput'); if (inp) inp.focus(); }, 50);
@@ -668,6 +737,7 @@ function closeModal() {
     state.pendingCallback = null;
 }
 
+// Keyboard shortcuts: Escape closes modal, Enter confirms it
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeModal();
     if (e.key === 'Enter' && $('#modalOverlay').classList.contains('open')) confirmModal();
@@ -677,26 +747,29 @@ document.addEventListener('keydown', (e) => {
  * Helpers
  */
 
+/** HTML-escape a string to prevent XSS when injecting into innerHTML. */
 function esc(str) { const d = document.createElement('div'); d.textContent = str || ''; return d.innerHTML; }
 
 /**
  * Project Selector (WSL Path Selector)
+ *
+ * Lets users pick which project directory scripts run in.
+ * Selection is persisted in localStorage ('devex_dash_project').
  */
 
 async function loadProjects() {
     try {
         const resp = await fetch('/api/projects');
         state.projects = await resp.json();
-    } catch { state.projects = []; }
+    } catch { state.projects = []; } // graceful fallback if API fails
 
     const sel = $('#projectSelect');
-    // Clear existing options except default and custom
     sel.innerHTML = '<option value="">Select project path\u2026</option>';
     for (const p of state.projects) {
         const opt = document.createElement('option');
         opt.value = p.path;
         opt.textContent = p.name + (p.exists ? '' : ' (not found)');
-        opt.disabled = !p.exists;
+        opt.disabled = !p.exists; // grey out paths that don't exist on disk
         sel.appendChild(opt);
     }
     const customOpt = document.createElement('option');
@@ -704,39 +777,42 @@ async function loadProjects() {
     customOpt.textContent = 'Custom path\u2026';
     sel.appendChild(customOpt);
 
-    // Restore saved selection
-    const saved = localStorage.getItem('devex_dash_project') || '';
-    if (saved) {
-        const known = state.projects.find(p => p.path === saved);
-        if (known) {
-            sel.value = saved;
+    // Restore previously selected project from localStorage
+    const savedProject = localStorage.getItem('devex_dash_project') || '';
+    if (savedProject) {
+        const isKnownPath = state.projects.find(p => p.path === savedProject);
+        if (isKnownPath) {
+            sel.value = savedProject;
         } else {
-            // Custom path — add it as an option
+            // Saved path isn't in the config - add it as a custom option
             const opt = document.createElement('option');
-            opt.value = saved;
-            opt.textContent = saved.split('/').pop() + ' (custom)';
+            opt.value = savedProject;
+            opt.textContent = savedProject.split('/').pop() + ' (custom)';
             sel.insertBefore(opt, sel.querySelector('[value="__custom__"]'));
-            sel.value = saved;
+            sel.value = savedProject;
         }
-        updateTargetLabel(saved);
+        updateTargetLabel(savedProject);
     }
 }
 
+/** Handle project dropdown change - show custom input or persist selection. */
 function onProjectSelectChange(sel) {
     const val = sel.value;
-    const input = $('#projectCustomInput');
+    const customInput = $('#projectCustomInput');
 
     if (val === '__custom__') {
-        input.classList.remove('hidden');
-        input.classList.remove('invalid');
-        input.value = '';
-        input.focus();
+        // Show the free-text path input
+        customInput.classList.remove('hidden');
+        customInput.classList.remove('invalid');
+        customInput.value = '';
+        customInput.focus();
         return;
     }
 
-    input.classList.add('hidden');
+    customInput.classList.add('hidden');
 
     if (val === '') {
+        // "Select project path…" placeholder - clear saved project
         localStorage.removeItem('devex_dash_project');
         updateTargetLabel('');
     } else {
@@ -751,7 +827,7 @@ function applyCustomProject() {
     const path = input.value.trim();
 
     if (path === '') {
-        // Cancelled — revert to default
+        // Cancelled - revert to default
         sel.value = '';
         input.classList.add('hidden');
         localStorage.removeItem('devex_dash_project');
@@ -774,16 +850,17 @@ function applyCustomProject() {
     updateTargetLabel(path);
 }
 
+/** Update the header badge to show the active project folder name. */
 function updateTargetLabel(path) {
     const badge = $('#envBadge');
-    const text = $('#envBadgeText');
+    const badgeText = $('#envBadgeText');
     const defaultName = $('#projectSelect').options[0].textContent;
     if (!path) {
-        text.textContent = defaultName;
+        badgeText.textContent = defaultName;
         badge.title = '';
     } else {
-        text.textContent = path.split('/').pop();
-        badge.title = path;
+        badgeText.textContent = path.split('/').pop(); // show just the folder name
+        badge.title = path; // full path on hover
     }
 }
 

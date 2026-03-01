@@ -95,7 +95,7 @@ lib/
 **Root:** `preflight-checks.sh` — project-wide validation entry point (repo root, not under `lib/`)
 
 **Dashboard** (`dashboard/`):
-- `start.sh` — PHP dashboard launcher (template)
+- `start-dev.sh` — PHP dashboard launcher (template)
 - `index.php` — Router, API handlers, localhost guard, process management
 - `frontend.php` — Single-page HTML/CSS/JS UI (inline, no build step)
 - `config.example.php` — Sample script registry with schema docs

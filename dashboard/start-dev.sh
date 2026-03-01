@@ -7,9 +7,9 @@
 # The dashboard provides a browser UI for running project scripts.
 #
 # Usage:
-#   ./dashboard/start.sh              # Start on default port
-#   ./dashboard/start.sh --port 9000  # Start on custom port
-#   ./dashboard/start.sh -h|--help    # Show help
+#   ./dashboard/start-dev.sh              # Start on default port
+#   ./dashboard/start-dev.sh --port 9000  # Start on custom port
+#   ./dashboard/start-dev.sh -h|--help    # Show help
 #
 # Prerequisites:
 #   - PHP 8.1+ with posix extension

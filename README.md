@@ -4,7 +4,7 @@ A collection of reusable shell scripts for project setup, development workflows,
 
 ## Directory Overview
 
-All scripts live under `lib/` to keep the repo root clean. Two root-level tools — `help.sh` (script listing) and `preflight-checks.sh` (quality gate) — live at the repo root for quick access.
+All scripts live under `lib/` to keep the repo root clean. Two root-level tools - `help.sh` (script listing) and `preflight-checks.sh` (quality gate) - live at the repo root for quick access.
 
 | Directory | Description |
 |---|---|
@@ -39,14 +39,14 @@ cp -r lib/stacks/php/ my-project/scripts/
 
 Scripts fall into two categories:
 
-**Drop-in** — Run as-is with no configuration. These are standalone tools:
+**Drop-in** - Run as-is with no configuration. These are standalone tools:
 - All `lib/ai-cli/` installers/uninstallers
 - `lib/codegen/generate-code-map.sh`
 - `lib/stacks/php/check-complexity.php`
 - `lib/maintenance/make-scripts-executable.sh`
 - `lib/maintenance/remove-zone-identifier.sh`
 
-**Template** — Require a `# ---- CONFIGURATION ----` block at the top with project-specific values. Copy into your project and fill in the variables:
+**Template** - Require a `# ---- CONFIGURATION ----` block at the top with project-specific values. Copy into your project and fill in the variables:
 - All `lib/aws/` scripts
 - All `lib/stacks/` scripts (except `check-complexity.php`)
 - All `lib/dev/` scripts (except `sync-env.sh`)
@@ -100,13 +100,13 @@ Code generation and analysis utilities.
 
 ### dashboard
 
-PHP-based web UI for running project scripts from the browser. Localhost-only — the PHP guard returns HTTP 403 for any non-localhost request. Includes a WSL path selector for running scripts against any local project.
+PHP-based web UI for running project scripts from the browser. Localhost-only - the PHP guard returns HTTP 403 for any non-localhost request. Includes a WSL path selector for running scripts against any local project.
 
 **Prerequisites:** PHP 8.1+ with posix extension, `script(1)` command
 
 | File | Purpose | Type |
 |---|---|---|
-| `start.sh` | Launch the PHP dashboard server on localhost | Template |
+| `start-dev.sh` | Launch the PHP dashboard server on localhost | Template |
 | `index.php` | Router, API handlers, localhost guard, process management | PHP |
 | `frontend.php` | Single-page HTML/CSS/JS UI with project switcher | PHP |
 | `config.example.php` | Sample script registry and project list | PHP |
@@ -154,7 +154,7 @@ Tool installation scripts.
 
 ### stacks
 
-Language-specific scripts organized by stack. Each stack is independently copyable — grab just the directory you need. All scripts source `lib/stacks/_common.sh` for shared helpers, colors, and `.env` loading.
+Language-specific scripts organized by stack. Each stack is independently copyable - grab just the directory you need. All scripts source `lib/stacks/_common.sh` for shared helpers, colors, and `.env` loading.
 
 #### stacks/php
 

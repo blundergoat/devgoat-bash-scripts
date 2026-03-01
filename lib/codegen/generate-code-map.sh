@@ -46,7 +46,9 @@ EXCLUDE_PATTERNS=()
 PATH_PATTERN=""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Use the git root of the cwd (set by the dashboard to the selected project),
+# falling back to two levels up from the script (repo root from lib/codegen/).
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || { cd "$SCRIPT_DIR/../.." && pwd; })"
 
 contains_glob() {
     [[ "$1" == *\** || "$1" == *\?* || "$1" == *\[* ]]
@@ -291,11 +293,11 @@ render_tree_for_pattern() {
     if [ "$has_glob" = true ]; then
         root_label="Scope: $pattern"
     elif [ "$clean_path" = "." ]; then
-        root_label="$(basename "$REPO_ROOT")/"
+        root_label="$(pwd)/"
     else
         local resolved_root
         resolved_root="$(cd "$clean_path" && pwd)"
-        root_label="$(basename "$resolved_root")/"
+        root_label="$resolved_root/"
     fi
 
     local display_files=()

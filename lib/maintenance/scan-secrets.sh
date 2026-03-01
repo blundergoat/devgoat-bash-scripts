@@ -26,24 +26,26 @@ passwords). Uses gitleaks if available, falls back to grep-based patterns.
 
 OPTIONS:
     -h, --help      Show this help message
-    --staged        Scan only staged files (default, for pre-commit hook use)
-    --all           Scan all files tracked by git
+    --staged        Scan only staged files (for pre-commit hook use)
+    --all           Scan all files tracked by git (default)
     -n, --dry-run   Show what would be scanned without scanning
 
 ARGUMENTS:
     PATH            Scan a specific file or directory
 
 EXAMPLES:
-    $0                          # Scan staged files (pre-commit)
-    $0 --all                    # Scan entire repo
+    $0                          # Scan all tracked files
+    $0 --staged                 # Scan only staged files (pre-commit)
     $0 lib/aws/                 # Scan specific directory
     $0 --staged                 # Explicitly scan staged files
 EOF
 }
 
 # Default values
-REPO_ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || (cd "$(dirname "$0")/../.." && pwd))"
-SCAN_MODE="staged"
+# Use the git root of the cwd (set by the dashboard to the selected project),
+# falling back to the git root of the script's own location.
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || { cd "$(dirname "$0")/../.." && pwd; })"
+SCAN_MODE="all"
 TARGET_PATH=""
 DRY_RUN=false
 

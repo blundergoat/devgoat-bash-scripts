@@ -143,7 +143,7 @@ entry "go/db-migrate-rollback.sh" "Safe migration rollback with backup"
 echo ""
 echo -e "  ${BOLD}Dashboard${RESET}  ${DIM}(dashboard/)${RESET}"
 echo ""
-entry "start.sh" "Launch PHP web UI for running scripts (template)"
+entry "start-dev.sh" "Launch PHP web UI for running scripts (template)"
 
 # ── Footer ───────────────────────────────────────────────────────
 echo ""
