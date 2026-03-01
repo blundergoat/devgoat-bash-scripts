@@ -6,7 +6,7 @@ Automated tests for devgoat-bash-scripts using [bats-core](https://github.com/ba
 
 ```bash
 # Install bats (pick one)
-./lib/setup/install-bats-core.sh
+./lib/tools/install-bats-core.sh
 sudo apt install bats           # Debian/Ubuntu package for bats-core
 brew install bats-core          # macOS
 npm install -g bats             # fallback

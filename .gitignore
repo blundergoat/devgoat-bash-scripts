@@ -20,3 +20,4 @@ __pycache__/
 .terraform/
 *.tfstate*
 .env.production
+dashboard/config.php

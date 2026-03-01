@@ -2,7 +2,7 @@
 # =============================================================================
 # Install Bats Core - Installs bats-core for running the test suite
 # =============================================================================
-# Usage: ./lib/setup/install-bats-core.sh [-h|--help]
+# Usage: ./lib/tools/install-bats-core.sh [-h|--help]
 #
 # Installs bats-core (Bash Automated Testing System) via apt, Homebrew, or npm
 # depending on what's available. After install, run the test suite with:
@@ -32,7 +32,7 @@ fail()    { echo -e "${FAIL}  ${RED}${1}${RESET}"; }
 
 show_help() {
     cat << 'EOF_HELP'
-Usage: ./lib/setup/install-bats-core.sh [OPTIONS]
+Usage: ./lib/tools/install-bats-core.sh [OPTIONS]
 
 Installs bats-core (Bash Automated Testing System) for running the test suite.
 

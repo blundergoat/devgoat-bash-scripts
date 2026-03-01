@@ -45,7 +45,7 @@ Cross-domain gotchas discovered in this codebase. When you cause a bug that span
 
 1. **ai-cli style** — Direct `echo -e` with color constants (`$RED`, `$GREEN`, etc.). No prefix tags. Used by all `lib/ai-cli/` scripts via `_common.sh`.
 2. **stacks style** — Structured `step`/`pass`/`fail`/`skip`/`warn` helpers with Unicode symbols (`✔`, `✘`, `○`, `▸`) plus `log_info`/`log_ok`/`log_warn`/`log_error` with `[INFO]`/`[OK]` prefix tags. Used by all `lib/stacks/` scripts via `_common.sh`.
-3. **standalone style** — Inline `log()`/`success()`/`warn()`/`error()` functions with `[tag]` prefixes. Each script defines its own. Used by `lib/aws/`, `lib/dev/`, `lib/maintenance/`, `lib/setup/`, `lib/codegen/`.
+3. **standalone style** — Inline `log()`/`success()`/`warn()`/`error()` functions with `[tag]` prefixes. Each script defines its own. Used by `lib/aws/`, `lib/dev/`, `lib/maintenance/`, `lib/tools/`, `lib/codegen/`.
 
 **Prevention:** Before writing a new script, read one sibling script in the same directory and match its logging pattern exactly. Never mix paradigms within a directory.
 

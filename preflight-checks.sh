@@ -345,8 +345,17 @@ fi
 step "Shellcheck"
 t=$(_goat_now)
 if ! command -v shellcheck &>/dev/null; then
-    skip "shellcheck not installed"
-else
+    echo -e "    ${DIM}shellcheck not found; attempting install...${RESET}"
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get install -y shellcheck >/dev/null 2>&1
+    elif command -v brew &>/dev/null; then
+        brew install shellcheck >/dev/null 2>&1
+    fi
+    if ! command -v shellcheck &>/dev/null; then
+        skip "shellcheck not installed — install manually: sudo apt install shellcheck | brew install shellcheck"
+    fi
+fi
+if command -v shellcheck &>/dev/null; then
     sc_failures=()
     for file in "${SCRIPTS[@]}"; do
         if ! shellcheck -x -S warning "$file" &>/dev/null; then
@@ -400,22 +409,9 @@ fi
 step "Bats tests (tests/)"
 t=$(_goat_now)
 if ! command -v bats &>/dev/null; then
-    installer="$REPO_ROOT/lib/setup/install-bats-core.sh"
-    if [[ -x "$installer" ]]; then
-        echo -e "    ${DIM}bats not found; attempting install via ./lib/setup/install-bats-core.sh${RESET}"
-        if ! "$installer"; then
-            fail "bats-core install failed"
-            echo -e "    ${DIM}Install manually and re-run preflight:${RESET}"
-            echo -e "    ${DIM}sudo apt install bats | brew install bats-core | npm install -g bats${RESET}"
-        fi
-    else
-        fail "bats not installed"
-        echo -e "    ${DIM}Installer not found: ./lib/setup/install-bats-core.sh${RESET}"
-        echo -e "    ${DIM}Install manually: sudo apt install bats | brew install bats-core | npm install -g bats${RESET}"
-    fi
-fi
-
-if command -v bats &>/dev/null; then
+    skip "bats not installed"
+    echo -e "    ${DIM}Install: sudo apt install bats-core | brew install bats-core | ./lib/tools/install-bats-core.sh${RESET}"
+else
     if bats tests/ --recursive </dev/null; then
         pass "$(elapsed_since "$t")"
     else

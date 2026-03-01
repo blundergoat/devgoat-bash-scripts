@@ -42,12 +42,13 @@ OPTIONS:
                     (prompts for confirmation)
 
 ARGUMENTS:
-    PORT            One or more port numbers to check
+    PORT            One or more port numbers (space or comma separated)
 
 EXAMPLES:
     $0 3000 8080            # Check ports 3000 and 8080
+    $0 3306,6379,8080       # Comma-separated list
     $0 3000 --kill          # Kill process on port 3000
-    $0                      # Check common dev ports (3000, 5432, 8080, 8081, 8082)
+    $0                      # Check common dev ports
 EOF
 }
 
@@ -56,7 +57,7 @@ KILL_MODE=false
 PORTS=()
 
 # Common development ports (used when no ports specified)
-DEFAULT_PORTS=(3000 5432 8080 8081 8082)
+DEFAULT_PORTS=(3000 3306 5432 6379 8000 8080 8081 8082 8899 11434)
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -75,12 +76,17 @@ while [[ $# -gt 0 ]]; do
             exit 1
             ;;
         *)
-            if [[ "$1" =~ ^[0-9]+$ ]]; then
-                PORTS+=("$1")
-            else
-                echo -e "${RED}Invalid port: $1${RESET}"
-                exit 1
-            fi
+            # Support comma-separated and space-separated ports
+            IFS=',' read -ra _parts <<< "$1"
+            for _p in "${_parts[@]}"; do
+                _p="${_p// /}"
+                if [[ "$_p" =~ ^[0-9]+$ ]]; then
+                    PORTS+=("$_p")
+                elif [[ -n "$_p" ]]; then
+                    echo -e "${RED}Invalid port: $_p${RESET}"
+                    exit 1
+                fi
+            done
             shift
             ;;
     esac
@@ -108,7 +114,7 @@ get_listener() {
     if [[ "$IS_MACOS" == true ]]; then
         # macOS: use lsof
         local lsof_output
-        lsof_output=$(lsof -iTCP:"$port" -sTCP:LISTEN -P -n 2>/dev/null | tail -n +2 | head -1)
+        lsof_output=$(lsof -iTCP:"$port" -sTCP:LISTEN -P -n 2>/dev/null | tail -n +2 | head -1) || true
         if [[ -n "$lsof_output" ]]; then
             LISTENER_PROC=$(echo "$lsof_output" | awk '{print $1}')
             LISTENER_PID=$(echo "$lsof_output" | awk '{print $2}')
@@ -117,9 +123,9 @@ get_listener() {
     else
         # Linux: use ss
         local ss_output
-        ss_output=$(ss -tlnp "sport = :${port}" 2>/dev/null | tail -n +2 | head -1)
+        ss_output=$(ss -tlnp "sport = :${port}" 2>/dev/null | tail -n +2 | head -1) || true
         if [[ -n "$ss_output" ]]; then
-            LISTENER_PID=$(echo "$ss_output" | grep -oP 'pid=\K[0-9]+' | head -1)
+            LISTENER_PID=$(echo "$ss_output" | grep -oP 'pid=\K[0-9]+' | head -1) || true
             if [[ -n "$LISTENER_PID" ]]; then
                 LISTENER_PROC=$(ps -p "$LISTENER_PID" -o comm= 2>/dev/null || echo "unknown")
                 LISTENER_USER=$(ps -p "$LISTENER_PID" -o user= 2>/dev/null || echo "unknown")

@@ -38,7 +38,7 @@ EOF
 }
 
 # Default values
-REPO_ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || cd "$(dirname "$0")/.." && pwd)"
+REPO_ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || { cd "$(dirname "$0")/../.." && pwd; })"
 TARGET_PATH="${REPO_ROOT}"
 DRY_RUN=false
 

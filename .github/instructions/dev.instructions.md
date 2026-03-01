@@ -1,8 +1,8 @@
 ---
-applyTo: "lib/dev/**,lib/maintenance/**,lib/setup/**,lib/codegen/**"
+applyTo: "lib/dev/**,lib/maintenance/**,lib/tools/**,lib/codegen/**"
 ---
 
-# dev / maintenance / setup / codegen Domains
+# dev / maintenance / tools / codegen Domains
 
 These four directories share the same self-contained script pattern. No shared library — each script defines its own colors and logging helpers inline.
 
@@ -55,14 +55,14 @@ Drop-in. Checks port listeners with `ss` (Linux) or `lsof` (macOS). Supports `--
 ### `dev/db-reset.sh`
 Template. Drops/creates database, runs migrations/seeds. Supports PostgreSQL and MySQL via `DB_ENGINE`. Uses `[db-reset]` prefix.
 
-### `setup/sync-env.sh`
+### `dev/sync-env.sh`
 Template. Finds `.env.example` files and copies to `.env` if missing. Supports `--force` and `--diff`.
 
 ## Template vs Drop-in
 
 | Directory | Templates | Drop-ins |
 |-----------|-----------|----------|
-| `dev/` | api-load-test, db-reset, dev-logs, docker-logs, health-check-localdev, health-check-remote, start-dev | docker-cleanup, gpu-check, port-check |
-| `maintenance/` | — | git-cleanup, lint-all, make-scripts-executable, remove-zone-identifier, scan-secrets, update-all, verify-checksums |
-| `setup/` | sync-env | install-ollama, uninstall-ollama |
-| `codegen/` | generate-api-client | generate-code-map |
+| `dev/` | api-load-test, db-reset, docker-logs, health-check-localdev, health-check-remote, start-dev, sync-env | docker-cleanup, gpu-check, port-check |
+| `maintenance/` | — | git-cleanup, lint-all, make-scripts-executable, remove-zone-identifier, scan-secrets |
+| `tools/` | — | install-bats-core, install-ollama, uninstall-ollama, install-starship, uninstall-starship |
+| `codegen/` | — | generate-code-map |
