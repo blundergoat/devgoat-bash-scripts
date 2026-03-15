@@ -38,6 +38,8 @@ _goat_now() {
     if [[ "$_GOAT_TIME_NS" == true ]]; then date +%s%N; else date +%s; fi
 }
 START_TIME=$(_goat_now)
+BATS_AUTO_INSTALL_ATTEMPTED=false
+BATS_AUTO_INSTALL_FAILED=false
 
 # ── Helpers ──────────────────────────────────────────────────────
 step() {
@@ -163,6 +165,35 @@ EXAMPLES:
     $(basename "$0")           # Run all checks
     $(basename "$0") --fix     # Fix executable bits, then run checks
 EOF
+}
+
+attempt_bats_auto_install() {
+    local installer_script="$REPO_ROOT/lib/tools/install-bats-core.sh"
+
+    if command -v bats &>/dev/null; then
+        return 0
+    fi
+
+    BATS_AUTO_INSTALL_ATTEMPTED=true
+    echo -e "  ${ARROW} Preparing bats-core${RESET} ${DIM}(not found; attempting auto-install)${RESET}"
+    echo ""
+
+    if [[ ! -x "$installer_script" ]]; then
+        BATS_AUTO_INSTALL_FAILED=true
+        warn "Installer not found or not executable: $installer_script"
+        echo ""
+        return 1
+    fi
+
+    if "$installer_script"; then
+        echo ""
+        return 0
+    fi
+
+    BATS_AUTO_INSTALL_FAILED=true
+    warn "Auto-install failed; falling back to skip"
+    echo ""
+    return 1
 }
 
 # ── Repo root & script discovery ─────────────────────────────────
@@ -407,15 +438,26 @@ else
     fi
 fi
 
+# Auto-install bats-core when available so the test check can run.
+attempt_bats_auto_install || true
+
 # 7. Bats tests
 step "Bats tests (tests/)"
 t=$(_goat_now)
 if ! command -v bats &>/dev/null; then
-    skip "bats not installed"
+    if [[ "$BATS_AUTO_INSTALL_FAILED" == true ]]; then
+        skip "bats auto-install failed"
+    else
+        skip "bats not installed"
+    fi
     echo -e "    ${DIM}Install: sudo apt install bats-core | brew install bats-core | ./lib/tools/install-bats-core.sh${RESET}"
 else
     if bats tests/ --recursive </dev/null; then
-        pass "$(elapsed_since "$t")"
+        if [[ "$BATS_AUTO_INSTALL_ATTEMPTED" == true ]]; then
+            pass "$(elapsed_since "$t") | auto-installed"
+        else
+            pass "$(elapsed_since "$t")"
+        fi
     else
         fail "Bats tests failed"
     fi

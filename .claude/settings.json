@@ -1,12 +1,18 @@
 {
+  "permissions": {
+    "deny": [
+      "Bash(*git commit*)",
+      "Bash(*git push*)"
+    ]
+  },
   "hooks": {
-    "PostToolUse": [
+    "PreToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "if [[ \"$CLAUDE_FILE_PATH\" == *.sh ]]; then shellcheck \"$CLAUDE_FILE_PATH\" 2>&1 | head -20; fi"
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/deny-dangerous.sh\""
           }
         ]
       }
@@ -16,7 +22,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "repo_root=$(git rev-parse --show-toplevel 2>/dev/null) && for f in $(git diff --name-only 2>/dev/null); do [[ \"$f\" == *.sh ]] && bash -n \"$repo_root/$f\" 2>&1; done; echo 'syntax check complete'"
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/stop-lint.sh\""
           }
         ]
       }

@@ -1,95 +1,85 @@
 # Footguns
 
-Cross-domain gotchas discovered in this codebase. When you cause a bug that spans multiple domains, append it here using the format below.
+Cross-domain gotchas confirmed in this codebase. Add entries only when the repo itself demonstrates the behaviour.
 
----
+## Footgun: Helper sourcing is directory-specific
 
-## Footgun: Strict mode exceptions
+**Symptoms:** A copied script cannot find its helper library, or it sources the wrong shared file after being moved.
 
-**Symptoms:** Script exits immediately on a non-zero return code that was expected to be handled. Or: adding `set -e` to a script that previously worked causes it to abort mid-run.
+**Why it happens:** `ai-cli`, `stacks`, and `aws` each resolve shared helpers differently, and the patterns are tied to the directory layout.
 
-**Why it happens:** Several scripts intentionally omit `-e` from their strict mode line (`set -uo pipefail` instead of `set -euo pipefail`) because they must continue past individual check failures to report a full summary:
+**Evidence:**
+- `lib/ai-cli/install-claude.sh:11`
+- `lib/stacks/node/setup.sh:17`
+- `lib/aws/aws-cli.sh:13`
 
-| Script | Reason |
-|--------|--------|
-| `lib/stacks/*/verify.sh` | Runs all prerequisite checks, reports summary at end |
-| `lib/stacks/*/preflight-checks.sh` | Runs quality gates, must report all failures |
-| `lib/health/check-gpu.sh` | Probes multiple GPU backends, some will always fail |
+**Prevention:** Match the helper source pattern used by sibling files in the same domain. Do not swap `SCRIPT_DIR/_common.sh` and `../_common.sh`.
 
-**Prevention:** Before adding `set -e` to any script, check if it uses `step`/`pass`/`fail` patterns or accumulates failures in an array. If it does, omitting `-e` is intentional.
+## Footgun: Only ai-cli sanitises WSL PATH
 
----
+**Symptoms:** A script resolves Windows binaries from `/mnt/*` inside WSL and then fails in confusing ways.
 
-## Footgun: WSL PATH pollution
+**Why it happens:** `ai-cli/_common.sh` rejects `/mnt/*` binaries and strips those PATH entries before Node/npm checks. Other domains rely on plain `command -v`.
 
-**Symptoms:** A script resolves a Windows binary (e.g., `/mnt/c/Program Files/nodejs/npm`) instead of the native Linux one. Commands appear to exist but produce wrong output or fail cryptically.
+**Evidence:**
+- `lib/ai-cli/_common.sh:54`
+- `lib/ai-cli/_common.sh:65`
+- `lib/aws/_aws-common.sh:101`
+- `lib/workflow/git-status.sh:44`
 
-**Why it happens:** Only `lib/ai-cli/_common.sh` sanitizes PATH for WSL (via `sanitize_path_for_wsl()` and `command_exists()`). Other domains use bare `command -v` checks, which can resolve Windows binaries leaking into WSL's PATH through `/mnt/*` entries.
+**Prevention:** If a non-ai-cli script must be WSL-safe, add an explicit native-binary check or document the assumption instead of assuming shared sanitisation exists.
 
-**Prevention:** When writing scripts that run on WSL and depend on native Linux binaries (node, npm, python, aws, docker), either source `ai-cli/_common.sh` or add an explicit `/mnt/*` rejection check. At minimum, document the WSL assumption.
+## Footgun: Strict-mode exceptions are intentional
 
----
+**Symptoms:** Adding `set -e` to a verify or preflight script causes it to abort before reporting the full failure summary.
 
-## Footgun: Three logging paradigms
+**Why it happens:** Some scripts intentionally use `set -uo pipefail` so they can accumulate failures. The root preflight script hard-codes these exceptions.
 
-**Symptoms:** A new script's output looks inconsistent with its sibling scripts. Log lines use a different prefix style, different colors, or different symbols than other scripts in the same directory.
+**Evidence:**
+- `lib/stacks/php/verify.sh:12`
+- `lib/stacks/node/preflight-checks.sh:8`
+- `lib/health/check-gpu.sh:21`
+- `preflight-checks.sh:251`
 
-**Why it happens:** The codebase uses three distinct logging paradigms:
+**Prevention:** Before changing strict mode, check whether the script is expected to keep running after a failed check and whether `preflight-checks.sh` already treats it as an exception.
 
-1. **ai-cli style** - Direct `echo -e` with color constants (`$RED`, `$GREEN`, etc.). No prefix tags. Used by all `lib/ai-cli/` scripts via `_common.sh`.
-2. **stacks style** - Structured `step`/`pass`/`fail`/`skip`/`warn` helpers with Unicode symbols (`✔`, `✘`, `○`, `▸`) plus `log_info`/`log_ok`/`log_warn`/`log_error` with `[INFO]`/`[OK]` prefix tags. Used by all `lib/stacks/` scripts via `_common.sh`.
-3. **standalone style** - Inline `log()`/`success()`/`warn()`/`error()` functions with `[tag]` prefixes. Each script defines its own. Used by `lib/aws/`, `lib/docker/`, `lib/health/`, `lib/workflow/`, `lib/maintenance/`, `lib/tools/`, `lib/codegen/`.
+## Footgun: Logging style is domain-scoped
 
-**Prevention:** Before writing a new script, read one sibling script in the same directory and match its logging pattern exactly. Never mix paradigms within a directory.
+**Symptoms:** A new script looks out of place because the log format, colours, or helper names do not match its neighbours.
 
----
+**Why it happens:** The repo uses at least three logging styles: ai-cli colour output, stacks `step`/`pass` helpers, and standalone inline log functions.
 
-## Footgun: `_common.sh` source patterns are not interchangeable
+**Evidence:**
+- `lib/ai-cli/install-claude.sh:16`
+- `lib/stacks/node/setup.sh:45`
+- `lib/aws/cloudfront-invalidate.sh:56`
+- `lib/maintenance/git-cleanup.sh:8`
 
-**Symptoms:** `source: No such file or directory` when running a script, or the wrong `_common.sh` gets loaded.
+**Prevention:** Read one sibling script in the touched directory before introducing a new logging helper or output style.
 
-**Why it happens:** The two shared libraries use different source patterns:
+## Footgun: Root preflight only scans lib scripts
 
-- **ai-cli** uses same-directory resolution:
-  ```bash
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  source "${SCRIPT_DIR}/_common.sh"
-  ```
-- **stacks** uses parent-directory traversal:
-  ```bash
-  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../_common.sh"
-  ```
+**Symptoms:** A root shell entrypoint, dashboard launcher, or workflow helper passes unnoticed even though it has syntax or lint issues.
 
-These patterns are tied to the directory structure. Copying a stacks script into a flat directory (or an ai-cli script into a subdirectory) breaks the source path.
+**Why it happens:** `preflight-checks.sh` discovers scripts only under `lib/`, while valid shell entrypoints also exist at the repo root and under `dashboard/`.
 
-**Prevention:** When copying scripts out of this repo, verify the `source` line resolves correctly in the target directory structure. When creating a new script under `stacks/`, always use the `../` traversal pattern. Under `ai-cli/`, always use the same-directory pattern.
+**Evidence:**
+- `preflight-checks.sh:242`
+- `help.sh:1`
+- `dashboard/start-dev.sh:1`
 
----
+**Prevention:** When changing shell files outside `lib/`, run explicit `bash -n` and `shellcheck` on them or use `scripts/preflight-checks.sh`.
 
-## Footgun: Template default values are intentional placeholders
+## Footgun: Dashboard AWS parsing depends on exact report headings
 
-**Symptoms:** An AI or contributor "fixes" placeholder values like `my-project`, `us-east-1`, or `8081` in a template script's CONFIGURATION block, breaking the template for all users.
+**Symptoms:** A dashboard section absorbs rows from the next section, or totals drift after a shell report heading changes.
 
-**Why it happens:** Template scripts use generic defaults (e.g., `PROJECT_NAME="${PROJECT_NAME:-my-project}"`) as placeholders that users fill in when copying the script into their project. These look like incomplete code to automated tools or reviewers unfamiliar with the template pattern.
+**Why it happens:** `dashboard/aws_ui.php` slices human-readable AWS cost output by heading names such as `EC2 - OTHER BREAKDOWN`. The shell producer emits those headings directly.
 
-**Prevention:** Never modify values inside a `# ---- CONFIGURATION ----` / `# ---- END CONFIGURATION ----` block unless you are intentionally changing the template interface. The `${VAR:-default}` pattern means the value is overridable via environment variables - the literal default is the fallback, not a mistake.
+**Evidence:**
+- `lib/aws/aws-costs.sh:323`
+- `lib/aws/aws-costs.sh:335`
+- `dashboard/aws_ui.php:1071`
+- `dashboard/aws_ui.php:1078`
 
----
-
-## Footgun: Many scripts lack `show_help()` / `--help`
-
-**Symptoms:** Running a script with `--help` produces an error or unexpected behavior instead of usage information.
-
-**Why it happens:** Some user-facing scripts still have no `show_help()` function or `--help` flag handling, especially older AWS templates and `stacks/go/` scripts.
-
-**Prevention:** When adding a new script that accepts arguments or has a CONFIGURATION block, always include a `show_help()` function and wire it to `-h|--help` in the argument parser. For drop-in scripts with no arguments, help is optional.
-
----
-
-## Footgun: `((var++))` under `set -e` aborts on first increment from zero
-
-**Symptoms:** Script using `((counter++))` exits unexpectedly on the first successful/failed check.
-
-**Why it happens:** In bash, `((var++))` is post-increment - it returns the value **before** incrementing. When `var` is 0, the expression evaluates to 0 (falsy), returning exit status 1. Under `set -e`, this aborts the script.
-
-**Prevention:** Use `var=$((var + 1))` or `((var += 1))` instead of `((var++))`. These always return truthy because the assignment itself succeeds.
+**Prevention:** Read the shell report and the PHP parser together before changing section names or row shapes. If the coupling grows, add a machine-readable output mode instead of scraping terminal text.

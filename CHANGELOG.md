@@ -6,6 +6,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [v1.4.0] - 2026-03-15
+
+### Added
+
+- **Tunnel system** — provider-agnostic tunnel management built into the dashboard.
+  - One-click Cloudflare quick tunnel with cloudflared process lifecycle management.
+  - Manual URL support for ngrok, localhost.run, Tailscale Funnel, or any provider.
+  - Recent URLs saved in localStorage (last 5, click to re-use).
+  - Live uptime timer, auto-refresh polling (20s), and cloudflared log viewer.
+  - Inline connectivity tester (GET/HEAD) with result alerts and curl preview.
+  - Browser notification when tunnel is ready.
+  - `dashboard/tunnel.php` — UI fragments (CSS, HTML, JS).
+  - `dashboard/index.php` — tunnel API endpoints: start, stop, configure, test, status, logs.
+  - `dashboard/start-dev.sh` — cleanup trap kills orphaned cloudflared on Ctrl+C.
+
+- **AWS reports backend and UI** — full AWS operations console accessible from the dashboard.
+  - `dashboard/aws.php` — report execution backend and API handlers.
+  - `dashboard/aws_ui.php` — tabbed UI with overview cards, cost analysis, rightsizing, security scanning, and CLI runner. Each tab retains its last result.
+  - `lib/aws/_aws-common.sh` — shared AWS auth and .env loader.
+  - `lib/aws/aws-costs.sh` — Cost Explorer analysis with service breakdown table.
+  - `lib/aws/aws-rightsizing.sh` — CloudWatch metrics and utilisation analysis for RDS, ECS, ALB, NAT, EC2.
+  - `lib/aws/aws-security.sh` — read-only scan of WAF rules, IAM users, security groups, S3 access blocks, and secrets rotation.
+  - `.env.example` — AWS credential template.
+
+- **Shared UI patterns** — reusable CSS classes added to both dashboard and AWS pages.
+  - `.status-badge` — inline dot + label indicator (success, error, warning, running, idle) with optional pulse animation.
+  - `.result-alert` — dismissible feedback banner with colored left border and slide-in animation.
+  - `.collapsible-header` / `.collapsible-body` — animated expand/collapse sections with rotating chevron.
+  - `focus-visible` outlines on all interactive elements for keyboard navigation.
+
+### Changed
+
+- **Dashboard terminal** — completion and stop results now show a fixed result-alert banner above the scrollable output (always visible, dismissible).
+- **Dashboard sidebar** — running script indicator uses left accent border. Category chevrons changed from `▾` to `▸` with consistent rotation direction.
+- **Dashboard welcome state** — centered flex layout instead of left-aligned italic text.
+- **Dashboard footer** — smaller, subtler attribution text with hover opacity.
+- **Dashboard Stop button** — disabled state no longer shows pink/red tint; neutralized to standard greyed-out appearance.
+- **Tunnel page layout** — status card is full-width hero; tunnel URL displayed at 14px bold mono with click-to-copy. Notes section collapsed into "Paste Tunnel URL" card as expandable "Usage Notes". Quick Start card visually differentiated with accent border.
+- **Tunnel globe button** — now shows "Tunnel" text label alongside icon for discoverability. Added `aria-label`.
+- **Tunnel test buttons** — "Open URL" and "Copy curl" de-emphasized; all test controls disabled when no tunnel URL is configured.
+- **Tunnel test results** — use `.result-alert` pattern instead of loose colored text.
+- **AWS reports Total Cost** — hero card treatment with 24px bold mono number and accent left border.
+- **AWS reports cost table** — inline proportional bar visualization behind each numeric cell. Added `tabular-nums` for vertical digit alignment.
+- **AWS reports overview cards** — hover elevation effect. Active tab highlights its matching overview card with accent border.
+- **AWS reports completion** — last-run status line shows badge, command, duration, and timestamp after report finishes.
+- **AWS reports theme toggle** — changed from "Toggle Theme" text button to icon-only moon SVG matching main dashboard.
+- **AWS reports back link** — text changed from "← Main Dashboard" to "← Back to Dashboard" for consistency with tunnel page.
+- **`lib/aws/aws-cli.sh`** — updated wrapper with shared auth loader integration.
+
+---
+
 ## [v1.3.0] - 2026-03-01
 
 ### Added

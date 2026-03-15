@@ -1,0 +1,60 @@
+name: AI Context Validation
+
+on:
+  pull_request:
+    paths:
+      - 'AGENTS.md'
+      - 'CLAUDE.md'
+      - '.claude/**'
+      - '.github/instructions/**'
+      - '.github/workflows/context-validation.yml'
+      - 'docs/**'
+      - 'scripts/**'
+      - 'codex-evals/**'
+      - 'agent-evals/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Codex workflow assets
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/context-validate.sh
+
+      - name: Validate Claude workflow assets
+        run: |
+          claude_lines=$(wc -l < CLAUDE.md)
+          echo "CLAUDE.md: ${claude_lines} lines"
+          if [ "${claude_lines}" -gt 150 ]; then
+            echo "::error::CLAUDE.md exceeds 150 line hard ceiling (${claude_lines} lines)"
+            exit 1
+          elif [ "${claude_lines}" -gt 100 ]; then
+            echo "::warning::CLAUDE.md exceeds 100 line target for libraries (${claude_lines} lines)"
+          fi
+
+          errors=0
+          while IFS= read -r -d '' skill_dir; do
+            if [ ! -f "${skill_dir}/SKILL.md" ]; then
+              echo "::error::Missing SKILL.md in ${skill_dir}"
+              errors=$((errors + 1))
+            fi
+          done < <(find .claude/skills -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
+
+          exit "${errors}"
+
+      - name: Local CLAUDE files stay short
+        run: |
+          errors=0
+          while IFS= read -r -d '' file; do
+            lines=$(wc -l < "${file}")
+            if [ "${lines}" -gt 20 ]; then
+              echo "::error::${file} exceeds 20 lines (${lines} lines)"
+              errors=$((errors + 1))
+            fi
+          done < <(find . -name 'CLAUDE.md' -not -path './CLAUDE.md' -not -path './.git/*' -print0 | sort -z)
+
+          exit "${errors}"

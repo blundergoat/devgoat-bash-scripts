@@ -1,4 +1,4 @@
-# /review - Shell Script Code Review
+# /code-review - Shell Script Code Review
 
 Review shell scripts for correctness, convention compliance, and potential issues.
 

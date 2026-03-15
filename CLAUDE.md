@@ -1,67 +1,100 @@
-# CLAUDE.md
+# CLAUDE.md — v1.0 (2026-03-15)
 
-Context for Claude Code when working on the devgoat-bash-scripts repository.
-
-## Project Identity
-
-devgoat-bash-scripts is a collection of reusable shell scripts organized by domain under `lib/`. Scripts are either **drop-in** (run as-is) or **template** (copy and fill in the `# ---- CONFIGURATION ----` block). No build system or package manager; includes a bats test suite under `tests/`.
+Shell script library. Drop-in or template scripts under `lib/`. Bats test suite under `tests/`.
 
 ## Essential Commands
 
 ```bash
-bash -n path/to/script.sh                              # Syntax-check a script
-shellcheck path/to/script.sh                           # Lint a script
-./lib/maintenance/make-scripts-executable.sh            # Restore chmod +x on all .sh files
-./lib/maintenance/make-scripts-executable.sh --dry-run  # Preview which files need executable bit
-./lib/codegen/generate-code-map.sh                      # Inspect repository structure
-./help.sh                                               # Script index (delegates to lib/workflow/help-index.sh)
-./preflight-checks.sh                                   # Quality gate (delegates to lib/quality/preflight.sh)
-bats tests/ --recursive                                 # Run bats test suite
+bash -n path/to/script.sh            # Syntax-check
+shellcheck path/to/script.sh         # Lint
+bats tests/ --recursive              # Run test suite
+./preflight-checks.sh                # Quality gate
 ```
 
-Validate changes by: syntax-checking with `bash -n`, running `shellcheck`, running `--help`, running `bats tests/ --recursive`, and exercising at least one safe execution path per changed script.
+## Execution Loop: READ → CLASSIFY → ACT → VERIFY → LOG
+
+**READ** — MUST read relevant files before changes. Cross-domain: MUST read both sides.
+```
+❌ "The _common.sh uses parent traversal" (guessed)
+✅ Read lib/stacks/_common.sh → confirmed: source "../_common.sh"
+```
+
+**CLASSIFY** — MUST declare mode (Plan/Implement/Explain/Debug/Review) before acting. Question = answer it; directive = act on it. MUST NOT infer implementation from a question.
+
+**ACT** — MUST declare: `State: [MODE] | Goal: [one line] | Exit: [condition]`
+
+| Mode | Behaviour |
+|------|-----------|
+| Plan | Produce artefact only. No app code. Exit on LGTM |
+| Implement | Code in 2-3 turns. 4th read without writing = stop |
+| Explain | Walkthrough only. No code changes unless asked |
+| Debug | Diagnosis with file:line first. Fixes after human reviews |
+| Review | Investigate first. Never blindly apply suggestions |
+
+```
+❌ Created abstract logging base class (one implementation)
+✅ Inline functions. Extract when second consumer appears
+```
+
+**VERIFY** — MUST run after each change: `bash -n` → `shellcheck` → `bats tests/ --recursive`
+- Level 1 (isolated failure): note, continue
+- Level 2 (cross-domain/security): MUST full stop, diagnosis with file:line, wait for human
+- Two corrections on same approach = MUST rewind
+
+**LOG** — SHOULD append to `docs/lessons.md` (behavioural mistakes) or `docs/footguns.md` (cross-domain traps with file:line evidence). SHOULD load footguns.md when touching Ask First boundaries.
+
+## Autonomy Tiers
+
+**Always:** Run tests/lint, read any file, write scripts, append to log files
+
+**Ask First** (MUST complete micro-checklist: boundary, related code read, footgun checked, rollback command):
+- `_common.sh` / `_aws-common.sh` changes (sourced by many scripts)
+- CONFIGURATION block interface changes (adding/removing variables)
+- Scripts in `lib/ai-cli/` that sanitise WSL PATH
+- Adding new domains/directories under `lib/`
+- Changing a script's logging paradigm (must match siblings)
+- Editing `.github/instructions/` files
+- Cross-domain changes. Strict mode exception changes
+
+**Never:** Delete tests to pass builds. Modify .env/secrets. Push to main. Force push. Change CONFIGURATION block values. Commit unless asked
+
+## Definition of Done
+
+MUST confirm ALL: (1) `bash -n` + `shellcheck` pass (2) `bats tests/` green (3) no unapproved boundary changes (4) logs updated if tripped (5) working notes current (6) grep old pattern after renames
 
 ## Hard Rules
 
-- `#!/usr/bin/env bash` + `set -euo pipefail` on every script. Exception: scripts that must continue past failures use `set -uo pipefail` - see `docs/footguns.md`.
-- Never modify values inside `# ---- CONFIGURATION ----` blocks - those are template placeholders.
-- Match the logging paradigm of sibling scripts (ai-cli colors, stacks step/pass/fail, standalone inline functions). See `docs/footguns.md` for details.
-- `_common.sh` source patterns differ between `ai-cli/` (same-dir) and `stacks/` (parent traversal) - they are not interchangeable.
-- Only `ai-cli/_common.sh` sanitizes WSL PATH. Other domains use bare `command -v`.
-- Run `bash -n` and `shellcheck` on changed scripts before declaring done.
-- Never commit credentials or secrets.
-- When you cause a bug that spans multiple domains, append it to `docs/footguns.md` using the existing format before closing the task.
+- MUST use `#!/usr/bin/env bash` + `set -euo pipefail` (exceptions: `docs/footguns.md`)
+- MUST match sibling logging paradigm (`docs/domain-reference.md`). `_common.sh` patterns are not interchangeable
+- MUST use short imperative commits. One per script. Never commit credentials
+- MUST append cross-domain bugs to `docs/footguns.md` before closing
 
-## Workflow Rules
+Sub-agents: ONE focused objective, structured return (paths, evidence, confidence, next step), 5-call budget.
+When blocked: ask exactly one question with a recommended default. If not blocked, decide and note assumption.
 
-- **Read before fixing** - Read actual code and trace execution paths before proposing changes. Don't assume behavior from filenames or variable names.
-- **Verify completeness** - After modifying a script: 1) strict mode, 2) `show_help()`, 3) CONFIGURATION block if template, 4) platform handling, 5) logging style matches siblings, 6) executable bit.
-- **Run preflight checks** - `bash -n` and `shellcheck` on all changed scripts. Fix errors before reporting done.
-- **Deep first pass** - When reviewing or debugging, do a deep pass. Check for false positives by reading surrounding code.
-- **Don't blindly apply external suggestions** - Investigate Copilot PR comments or external review feedback against the actual codebase first. Some suggestions cause breaking changes in shell scripts.
+## Working Memory
 
-## Common Workflows
+SHOULD use `tasks/todo.md` for 5+ turn tasks. SHOULD write `tasks/handoff.md` before ending incomplete work. Context escalation: `/compact` after 15+ turns → split if two compactions → `/clear` between unrelated tasks.
 
-**Adding an ai-cli installer:** Copy an existing `install-*.sh`. Source `_common.sh` via `SCRIPT_DIR`. Use `block_gitbash`, `require_node_or_install`, `verify_native_binary`. No prefix tags in log output.
+## Router Table
 
-**Adding a stacks script:** Source `../_common.sh`. Use `step`/`pass`/`fail`/`summary` for checks, `log_info`/`log_ok` for actions. Omit `-e` if the script must report all failures.
-
-**Adding a standalone script (aws/workflow/deps/docker/health/quality/maintenance/tools/codegen):** Self-contained - define inline colors and `log`/`success`/`warn`/`error` functions. Use `set -euo pipefail`. Add CONFIGURATION block if template.
-
-## Commit Format
-
-Short, imperative subjects (e.g., `add docker restart wrapper`). One commit per script or workflow. Never commit credentials.
-
-## Context Router
-
-Load these files on demand when working in a specific domain:
-
-| Domain | File | When to load |
-|--------|------|-------------|
-| All scripts | `.github/instructions/shell-conventions.instructions.md` | Writing or reviewing any `.sh` file |
-| `lib/ai-cli/` | `.github/instructions/ai-cli.instructions.md` | Working on AI CLI installers |
-| `lib/aws/` | `.github/instructions/aws.instructions.md` | Working on AWS scripts |
-| `lib/stacks/` | `.github/instructions/stacks.instructions.md` | Working on stack scripts |
-| `lib/workflow/`, `lib/docker/`, `lib/health/`, `lib/maintenance/`, `lib/tools/`, `lib/codegen/` | `.github/instructions/dev.instructions.md` | Working on standalone/orchestration scripts |
-| Orientation | `docs/code-map.md` | Understanding repo structure |
-| Gotchas | `docs/footguns.md` | Debugging cross-domain issues |
+| Resource | Path |
+|----------|------|
+| Domain reference | `docs/domain-reference.md` |
+| Architecture | `docs/architecture.md` |
+| Code map | `docs/code-map.md` |
+| Footguns | `docs/footguns.md` |
+| Lessons | `docs/lessons.md` |
+| Bats guide | `docs/bats-core.md` |
+| Shell conventions | `.github/instructions/shell-conventions.instructions.md` |
+| ai-cli domain | `.github/instructions/ai-cli.instructions.md` |
+| AWS domain | `.github/instructions/aws.instructions.md` |
+| Stacks domain | `.github/instructions/stacks.instructions.md` |
+| Standalone domains | `.github/instructions/dev.instructions.md` |
+| Preflight skill | `.claude/skills/preflight/` |
+| Code review skill | `.claude/skills/code-review/` |
+| Debug skill | `.claude/skills/debug-investigate/` |
+| Audit skill | `.claude/skills/audit/` |
+| Research skill | `.claude/skills/research/` |
+| Agent evals | `agent-evals/` |
+| Handoff template | `tasks/handoff-template.md` |

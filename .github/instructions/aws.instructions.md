@@ -4,15 +4,17 @@ applyTo: "lib/aws/**"
 
 # aws Domain
 
-AWS infrastructure wrappers. All scripts are **templates** — users copy them into a project and fill in the CONFIGURATION block.
+AWS infrastructure wrappers. Scripts are **templates** — users copy them into a project and fill in the CONFIGURATION block.
 
 ## Script Pattern
 
-All aws scripts are self-contained (no shared library). Each defines:
+AWS scripts source `_aws-common.sh` for shared helpers (auth, .env loading, color constants, require_cmd). Each script defines:
 1. `set -euo pipefail`
-2. `# ---- CONFIGURATION ----` block with AWS_PROFILE, AWS_REGION, PROJECT_NAME, and resource-specific vars
-3. Inline color constants (RED, GREEN, YELLOW, BLUE, CYAN, BOLD, NC)
-4. Inline logging functions
+2. `# ---- CONFIGURATION ----` block with AWS_PROFILE_NAME, AWS_REGION, and resource-specific vars
+3. `source "$SCRIPT_DIR/_aws-common.sh"` for shared colors, auth, and helpers
+4. `_aws-common.sh` is an **Ask First** boundary — changes affect all AWS scripts
+
+**Note:** `_aws-common.sh` provides `require_cmd`, `require_unix`, `require_modern_bash`, `ensure_aws_cli`, `require_aws_auth`, `load_env_file`, and color constants. Scripts that need `jq` or `bc` call `require_cmd` themselves.
 
 ## Logging Style
 
@@ -36,7 +38,7 @@ error()   { echo -e "${RED}[tag]${NC} $*"; exit 1; }
 ## CONFIGURATION Block Variables
 
 Typical variables across aws scripts:
-- `AWS_PROFILE`, `AWS_REGION` — always present
+- `AWS_PROFILE_NAME`, `AWS_REGION` — always present (set before sourcing `_aws-common.sh`)
 - `PROJECT_NAME` — used to derive resource names
 - `APP_ID`, `BRANCH_NAME` — Amplify scripts
 - `SECRET_PREFIX`, `REQUIRED_SECRETS` — Secrets Manager scripts

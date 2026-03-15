@@ -170,6 +170,32 @@ export PROJECT_NAME
 export SITE_URL
 export ENV_NAME
 
+# ── Cleanup on exit ──────────────────────────────────────────────
+
+cleanup() {
+    local sanitized_slug
+    sanitized_slug=$(echo "${PROJECT_NAME}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9_-]/-/g')
+    local tmp_dir="/tmp/${sanitized_slug}-dashboard"
+    local pid_file="${tmp_dir}/tunnel-cloudflare.pid"
+
+    if [[ -f "${pid_file}" ]]; then
+        local pid
+        pid=$(<"${pid_file}")
+        if [[ "${pid}" =~ ^[0-9]+$ ]] && kill -0 "${pid}" 2>/dev/null; then
+            log "Stopping cloudflared tunnel (pid ${pid})..."
+            kill -15 "-${pid}" 2>/dev/null || true
+            kill -15 "${pid}" 2>/dev/null || true
+            sleep 1
+            if kill -0 "${pid}" 2>/dev/null; then
+                kill -9 "${pid}" 2>/dev/null || true
+            fi
+        fi
+        rm -f "${pid_file}"
+    fi
+}
+
+trap cleanup EXIT
+
 # ── Start server ─────────────────────────────────────────────────
 
 echo ""
