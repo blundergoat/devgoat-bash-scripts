@@ -183,7 +183,7 @@ findings_count=0
 echo -e "${BOLD}${CYAN}  RDS INSTANCES${NC}"
 echo -e "${DIM}  ─────────────────────────────────────────────────────────────${NC}"
 
-rds_instances=$(aws rds describe-db-instances --output json 2>/dev/null)
+rds_instances=$(aws rds describe-db-instances --output json 2>/dev/null || echo '{"DBInstances":[]}')
 rds_count=$(echo "$rds_instances" | jq '.DBInstances | length')
 
 if [[ "$rds_count" -eq 0 ]]; then
@@ -341,10 +341,10 @@ echo ""
 echo -e "${BOLD}${CYAN}  ECS FARGATE SERVICES${NC}"
 echo -e "${DIM}  ─────────────────────────────────────────────────────────────${NC}"
 
-clusters=$(aws ecs list-clusters --query 'clusterArns[*]' --output json 2>/dev/null)
+clusters=$(aws ecs list-clusters --query 'clusterArns[*]' --output json 2>/dev/null || echo '[]')
 while IFS= read -r cluster_arn; do
     cluster_name=$(echo "$cluster_arn" | rev | cut -d'/' -f1 | rev)
-    services=$(aws ecs list-services --cluster "$cluster_name" --query 'serviceArns[*]' --output json 2>/dev/null)
+    services=$(aws ecs list-services --cluster "$cluster_name" --query 'serviceArns[*]' --output json 2>/dev/null || echo '[]')
 
     while IFS= read -r service_arn; do
         service_name=$(echo "$service_arn" | rev | cut -d'/' -f1 | rev)
@@ -457,7 +457,7 @@ echo ""
 echo -e "${BOLD}${CYAN}  APPLICATION LOAD BALANCERS${NC}"
 echo -e "${DIM}  ─────────────────────────────────────────────────────────────${NC}"
 
-albs=$(aws elbv2 describe-load-balancers --query 'LoadBalancers[?Type==`application`]' --output json 2>/dev/null)
+albs=$(aws elbv2 describe-load-balancers --query 'LoadBalancers[?Type==`application`]' --output json 2>/dev/null || echo '[]')
 alb_count=$(echo "$albs" | jq 'length')
 
 for i in $(seq 0 $((alb_count - 1))); do
@@ -542,7 +542,7 @@ echo ""
 echo -e "${BOLD}${CYAN}  NAT GATEWAYS${NC}"
 echo -e "${DIM}  ─────────────────────────────────────────────────────────────${NC}"
 
-nat_gws=$(aws ec2 describe-nat-gateways --filter "Name=state,Values=available" --query 'NatGateways[*].{id:NatGatewayId,subnet:SubnetId,state:State}' --output json 2>/dev/null)
+nat_gws=$(aws ec2 describe-nat-gateways --filter "Name=state,Values=available" --query 'NatGateways[*].{id:NatGatewayId,subnet:SubnetId,state:State}' --output json 2>/dev/null || echo '[]')
 nat_count=$(echo "$nat_gws" | jq 'length')
 
 if [[ "$nat_count" -eq 0 ]]; then
@@ -649,7 +649,7 @@ echo ""
 echo -e "${BOLD}${CYAN}  CLOUDWATCH LOG GROUPS${NC}"
 echo -e "${DIM}  ─────────────────────────────────────────────────────────────${NC}"
 
-log_groups=$(aws logs describe-log-groups --query 'logGroups[?storedBytes > `0`].{name:logGroupName,bytes:storedBytes,retention:retentionInDays}' --output json 2>/dev/null)
+log_groups=$(aws logs describe-log-groups --query 'logGroups[?storedBytes > `0`].{name:logGroupName,bytes:storedBytes,retention:retentionInDays}' --output json 2>/dev/null || echo '[]')
 log_count=$(echo "$log_groups" | jq 'length')
 
 if [[ "$log_count" -gt 0 ]]; then

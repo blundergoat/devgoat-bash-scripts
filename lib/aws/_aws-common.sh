@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 # Shared helpers for AWS scripts. Source this file; do not execute it directly.
+#
+# Scripts that source this file (aws-costs.sh, aws-rightsizing.sh, aws-security.sh)
+# are NOT standalone templates. If copying them to another project, also copy this
+# file and preserve the relative path, or inline the helpers you need.
 
 if [[ -n "${_AWS_COMMON_LOADED:-}" ]]; then
     return 0 2>/dev/null || exit 0
@@ -75,7 +79,8 @@ if [[ -n "${AWS_ACCESS_KEY_ID:-}" && -n "${AWS_SECRET_ACCESS_KEY:-}" ]]; then
     export AWS_SECRET_ACCESS_KEY
     export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-$AWS_REGION}"
 
-    if [[ "$_env_file_has_aws_session_token" == true ]]; then
+    if [[ -n "${AWS_SESSION_TOKEN:-}" ]]; then
+        # Preserve session token from .env or pre-existing environment (e.g. assume-role)
         export AWS_SESSION_TOKEN
     else
         unset AWS_SESSION_TOKEN 2>/dev/null || true

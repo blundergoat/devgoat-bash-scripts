@@ -79,7 +79,7 @@ echo ""
 echo -e "${BOLD}${CYAN}  WAF WEB ACLs${NC}"
 echo -e "${DIM}  ─────────────────────────────────────────────────────────────${NC}"
 
-waf_list=$(aws wafv2 list-web-acls --scope REGIONAL --output json 2>/dev/null)
+waf_list=$(aws wafv2 list-web-acls --scope REGIONAL --output json 2>/dev/null || echo '{"WebACLs":[]}')
 waf_count=$(echo "$waf_list" | jq '.WebACLs | length')
 
 if [[ "$waf_count" -eq 0 ]]; then
@@ -258,7 +258,7 @@ echo -e "${BOLD}${CYAN}  IAM USERS${NC}"
 echo -e "${DIM}  ─────────────────────────────────────────────────────────────${NC}"
 echo ""
 
-iam_users=$(aws iam list-users --query 'Users[*].UserName' --output json 2>/dev/null)
+iam_users=$(aws iam list-users --query 'Users[*].UserName' --output json 2>/dev/null || echo '[]')
 user_count=$(echo "$iam_users" | jq 'length')
 no_mfa_count=0
 old_key_count=0
@@ -329,7 +329,7 @@ echo -e "${BOLD}${CYAN}  S3 PUBLIC ACCESS BLOCKS${NC}"
 echo -e "${DIM}  ─────────────────────────────────────────────────────────────${NC}"
 echo ""
 
-s3_buckets=$(aws s3api list-buckets --query 'Buckets[*].Name' --output json 2>/dev/null)
+s3_buckets=$(aws s3api list-buckets --query 'Buckets[*].Name' --output json 2>/dev/null || echo '[]')
 not_blocked_count=0
 
 for bucket in $(echo "$s3_buckets" | jq -r '.[]' 2>/dev/null); do
@@ -414,7 +414,7 @@ echo -e "${BOLD}${CYAN}  SECRETS MANAGER ROTATION${NC}"
 echo -e "${DIM}  ─────────────────────────────────────────────────────────────${NC}"
 echo ""
 
-secrets=$(aws secretsmanager list-secrets --output json 2>/dev/null)
+secrets=$(aws secretsmanager list-secrets --output json 2>/dev/null || echo '{"SecretList":[]}')
 secret_count=$(echo "$secrets" | jq '.SecretList | length')
 no_rotation_count=0
 if [[ "$secret_count" -eq 0 ]]; then
@@ -445,7 +445,7 @@ echo -e "${BOLD}${CYAN}  CLOUDTRAIL${NC}"
 echo -e "${DIM}  ─────────────────────────────────────────────────────────────${NC}"
 echo ""
 
-trails=$(aws cloudtrail describe-trails --output json 2>/dev/null)
+trails=$(aws cloudtrail describe-trails --output json 2>/dev/null || echo '{"trailList":[]}')
 trail_count=$(echo "$trails" | jq '.trailList | length')
 
 if [[ "$trail_count" -eq 0 ]]; then
