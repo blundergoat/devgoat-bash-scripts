@@ -1,0 +1,232 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+BLUE='\033[0;34m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+NC='\033[0m'
+
+log() {
+    echo -e "${BLUE}[context]${NC} $*"
+}
+
+success() {
+    echo -e "${GREEN}[ok]${NC} $*"
+}
+
+warn() {
+    echo -e "${YELLOW}[warn]${NC} $*"
+}
+
+fail() {
+    echo -e "${RED}[fail]${NC} $*" >&2
+    FAILURES=$((FAILURES + 1))
+}
+
+show_help() {
+    cat <<'EOF'
+Usage: ./scripts/context-validate.sh
+
+Validate the Codex workflow assets:
+  - AGENTS.md router targets
+  - playbook required sections
+  - lessons/footguns/ownership docs
+  - tasks runtime files
+  - Codex eval presence
+
+Exit codes:
+  0  All checks passed
+  1  One or more checks failed
+EOF
+}
+
+check_required_heading() {
+    local file="$1"
+    local pattern="$2"
+
+    if ! grep -qF "$pattern" "$file"; then
+        fail "Missing heading '$pattern' in ${file#"$REPO_ROOT"/}"
+    fi
+}
+
+check_router_targets() {
+    local agents_file="$REPO_ROOT/AGENTS.md"
+    local in_router=false
+    local line raw_path path
+
+    while IFS= read -r line; do
+        if [[ "$line" == "## Router" ]]; then
+            in_router=true
+            continue
+        fi
+
+        if [[ "$in_router" != true ]]; then
+            continue
+        fi
+
+        if [[ -z "$line" ]]; then
+            break
+        fi
+
+        if [[ "$line" != \|* ]]; then
+            continue
+        fi
+
+        raw_path="$(printf '%s\n' "$line" | awk -F'|' '{print $3}' | xargs)"
+        if [[ -z "$raw_path" || "$raw_path" == "Path" || "$raw_path" == "---" ]]; then
+            continue
+        fi
+
+        path="${raw_path//\`/}"
+        if [[ "$path" == *"*"* ]]; then
+            if ! compgen -G "$REPO_ROOT/$path" > /dev/null; then
+                fail "Router target missing: $path"
+            fi
+        elif [[ ! -e "$REPO_ROOT/$path" ]]; then
+            fail "Router target missing: $path"
+        fi
+    done < "$agents_file"
+}
+
+check_playbooks() {
+    local dir="$REPO_ROOT/docs/codex-playbooks"
+    local count
+
+    count=$(find "$dir" -maxdepth 1 -type f -name '*.md' | wc -l)
+    if [[ "$count" -ne 5 ]]; then
+        fail "Expected 5 playbooks in docs/codex-playbooks, found $count"
+    fi
+
+    check_required_heading "$dir/preflight.md" "## MUST"
+    check_required_heading "$dir/preflight.md" "## SHOULD"
+    check_required_heading "$dir/preflight.md" "## MAY"
+    check_required_heading "$dir/preflight.md" "## Output"
+
+    check_required_heading "$dir/research.md" "## Hard Gate"
+    check_required_heading "$dir/research.md" "### Files Involved"
+    check_required_heading "$dir/research.md" "### Request Flow"
+    check_required_heading "$dir/research.md" "### Boundaries Touched"
+    check_required_heading "$dir/research.md" "### Risks / Gotchas"
+
+    check_required_heading "$dir/debug-investigate.md" "## Hard Gate"
+    check_required_heading "$dir/debug-investigate.md" "## Workflow"
+    check_required_heading "$dir/debug-investigate.md" "## Diagnosis Template"
+
+    check_required_heading "$dir/audit.md" "### Discovery"
+    check_required_heading "$dir/audit.md" "### Verification"
+    check_required_heading "$dir/audit.md" "### Prioritisation"
+    check_required_heading "$dir/audit.md" "### Self-Check"
+
+    check_required_heading "$dir/code-review.md" "## Findings Order"
+    check_required_heading "$dir/code-review.md" "## Review Checklist"
+    check_required_heading "$dir/code-review.md" "## Output"
+}
+
+check_docs() {
+    local architecture_lines
+    local lessons_file="$REPO_ROOT/docs/lessons.md"
+    local split_file="$REPO_ROOT/docs/guidelines-ownership-split.md"
+
+    architecture_lines=$(wc -l < "$REPO_ROOT/docs/architecture.md")
+    if (( architecture_lines > 100 )); then
+        fail "docs/architecture.md exceeds 100 lines ($architecture_lines)"
+    fi
+
+    check_required_heading "$lessons_file" "## Patterns"
+    check_required_heading "$lessons_file" "## Entries"
+    check_required_heading "$split_file" "## Before / After Overlap Report"
+}
+
+check_footguns() {
+    local footguns_file="$REPO_ROOT/docs/footguns.md"
+    local entry_count ref_count
+    local ref clean_ref path line total_lines
+    local footgun_ref_regex
+
+    if grep -qi "none confirmed yet" "$footguns_file"; then
+        success "docs/footguns.md explicitly states none confirmed yet"
+        return
+    fi
+
+    entry_count=$(grep -c '^## Footgun:' "$footguns_file")
+    if (( entry_count == 0 )); then
+        fail "docs/footguns.md has no '## Footgun:' entries"
+        return
+    fi
+
+    footgun_ref_regex="\`[^\`]+:[0-9]+\`"
+    ref_count=$(grep -oE "$footgun_ref_regex" "$footguns_file" | wc -l)
+    if (( ref_count == 0 )); then
+        fail "docs/footguns.md has no backticked file:line evidence"
+        return
+    fi
+
+    while IFS= read -r ref; do
+        clean_ref="${ref#\`}"
+        clean_ref="${clean_ref%\`}"
+        path="${clean_ref%:*}"
+        line="${clean_ref##*:}"
+
+        if [[ ! -f "$REPO_ROOT/$path" ]]; then
+            fail "Footgun evidence path missing: $path"
+            continue
+        fi
+
+        total_lines=$(wc -l < "$REPO_ROOT/$path")
+        if (( line < 1 || line > total_lines )); then
+            fail "Footgun evidence out of range: $clean_ref"
+        fi
+    done < <(grep -oE "$footgun_ref_regex" "$footguns_file")
+}
+
+check_tasks() {
+    local todo_file="$REPO_ROOT/tasks/todo.md"
+    local handoff_file="$REPO_ROOT/tasks/handoff.md"
+
+    [[ -f "$todo_file" ]] || fail "Missing runtime task file: tasks/todo.md"
+    [[ -f "$handoff_file" ]] || fail "Missing runtime task file: tasks/handoff.md"
+}
+
+check_evals() {
+    local eval_dir="$REPO_ROOT/codex-evals"
+    local eval_count
+
+    [[ -f "$eval_dir/README.md" ]] || fail "Missing codex-evals/README.md"
+    eval_count=$(find "$eval_dir" -maxdepth 1 -type f -name '*.md' ! -name 'README.md' | wc -l)
+    if (( eval_count < 5 )); then
+        fail "Expected at least 5 Codex evals, found $eval_count"
+    fi
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    show_help
+    exit 0
+fi
+
+if [[ $# -gt 0 ]]; then
+    echo "Unknown argument: $1" >&2
+    show_help
+    exit 1
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(git -C "$SCRIPT_DIR/.." rev-parse --show-toplevel)"
+FAILURES=0
+
+log "Validating Codex workflow assets"
+check_router_targets
+check_playbooks
+check_docs
+check_footguns
+check_tasks
+check_evals
+
+if (( FAILURES > 0 )); then
+    echo ""
+    fail "Context validation failed with $FAILURES issue(s)"
+    exit 1
+fi
+
+success "Context validation passed"

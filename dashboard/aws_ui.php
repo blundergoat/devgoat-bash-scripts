@@ -166,14 +166,16 @@ body {
 .aws-eyebrow {
     font-family: var(--font-mono);
     font-size: 10px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--c-text-faint);
+    letter-spacing: 0.1em;
+    color: var(--c-text-muted);
     margin-bottom: 6px;
 }
 .aws-header h1 {
-    font-size: clamp(1rem, 1.4vw, 1.2rem);
-    letter-spacing: -0.03em;
+    font-size: clamp(0.95rem, 1.3vw, 1.1rem);
+    font-weight: 600;
+    letter-spacing: -0.025em;
     line-height: 1.1;
     margin-bottom: 4px;
 }
@@ -206,8 +208,9 @@ body {
     border: 1.5px solid var(--c-badge-border);
     color: var(--c-badge-text);
     font-size: 10px;
-    font-weight: 700;
+    font-weight: 600;
 }
+.aws-chip strong { font-weight: 600; }
 .aws-chip.bad {
     color: var(--c-red);
     border-color: var(--c-red);
@@ -250,7 +253,7 @@ body {
     font-size: 11px;
     font-family: inherit;
     line-height: 1.2;
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
     box-shadow: var(--shadow-sm);
@@ -280,12 +283,13 @@ body {
     align-items: flex-start;
 }
 .aws-card-title h2 {
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 600;
     letter-spacing: -0.02em;
     margin-bottom: 2px;
 }
 .aws-card-title p {
-    color: var(--c-text-faint);
+    color: var(--c-text-muted);
     font-size: 11px;
     line-height: 1.45;
 }
@@ -307,11 +311,12 @@ body {
 .field-label {
     display: block;
     margin-bottom: 6px;
-    font-family: var(--font-mono);
-    font-size: 10px;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--c-text-faint);
+    letter-spacing: 0.1em;
+    color: var(--c-text-muted);
 }
 .field-input,
 .field-select,
@@ -332,7 +337,7 @@ body {
 .field-static {
     font-family: var(--font-mono);
 }
-.field-static.muted { color: var(--c-text-faint); }
+.field-static.muted { color: var(--c-text-muted); }
 .field-textarea {
     min-height: 88px;
     resize: vertical;
@@ -358,7 +363,7 @@ body {
     font-size: 11px;
     font-family: inherit;
     line-height: 1.2;
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
     transition: all 0.15s;
@@ -383,7 +388,7 @@ body {
 .card-footnote,
 .helper-copy {
     margin-top: 8px;
-    color: var(--c-text-faint);
+    color: var(--c-text-muted);
     font-size: 11px;
     line-height: 1.5;
 }
@@ -408,7 +413,7 @@ body {
     font-size: 11px;
     font-family: inherit;
     line-height: 1.2;
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -442,6 +447,7 @@ body {
 }
 .results-toolbar h2 {
     font-size: 16px;
+    font-weight: 600;
     letter-spacing: -0.03em;
     margin-bottom: 4px;
 }
@@ -481,11 +487,12 @@ body {
     margin-bottom: 10px;
 }
 .panel-head h3 {
-    font-size: 10px;
+    font-size: 11px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--c-text-faint);
-    font-family: var(--font-mono);
+    letter-spacing: 0.1em;
+    color: var(--c-text-muted);
+    font-family: var(--font-sans);
 }
 .panel-head span {
     font-size: 11px;
@@ -510,7 +517,7 @@ body {
     border-radius: 999px;
     padding: 3px 8px;
     font-size: 10px;
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
 }
@@ -533,14 +540,22 @@ body {
 .summary-card strong {
     display: block;
     font-size: 11px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--c-text-faint);
+    letter-spacing: 0.08em;
+    color: var(--c-text-muted);
     margin-bottom: 6px;
 }
 .summary-card span {
     font-size: 16px;
-    font-weight: 800;
+    font-weight: 600;
+    line-height: 1.3;
+}
+.summary-card .summary-value-text {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.45;
+    word-break: break-word;
 }
 .summary-card.good span { color: var(--good); }
 .summary-card.warn span { color: var(--warn); }
@@ -565,6 +580,7 @@ body {
 .run-banner-text strong {
     display: block;
     font-size: 12px;
+    font-weight: 600;
     margin-bottom: 2px;
 }
 .run-banner-text span {
@@ -578,7 +594,7 @@ body {
 }
 .run-banner-time {
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 700;
     white-space: nowrap;
 }
 .aws-table-shell,
@@ -599,9 +615,11 @@ body {
 }
 .table-head h3 {
     font-size: 11px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--c-text-faint);
+    letter-spacing: 0.1em;
+    color: var(--c-text-muted);
+    font-family: var(--font-sans);
 }
 .table-head span,
 .shell-meta {
@@ -625,11 +643,12 @@ th, td {
     text-align: left;
 }
 th {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 11px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--c-text-faint);
+    letter-spacing: 0.08em;
+    color: var(--c-text-muted);
     white-space: nowrap;
 }
 td.numeric,
@@ -674,11 +693,12 @@ th.numeric {
 .identity-card strong {
     display: block;
     margin-bottom: 8px;
-    font-size: 10px;
+    font-size: 11px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--c-text-faint);
-    font-family: var(--font-mono);
+    letter-spacing: 0.08em;
+    color: var(--c-text-muted);
+    font-family: var(--font-sans);
 }
 .identity-card code,
 .identity-card span {
@@ -740,7 +760,7 @@ th.numeric {
 }
 .summary-card.hero span {
     font-size: 24px;
-    font-weight: 800;
+    font-weight: 700;
     font-family: var(--font-mono);
 }
 
@@ -1261,7 +1281,7 @@ function buildCostBody(result) {
 function buildFindingsBody(result, analysis, label) {
     return `
         <div class="summary-grid">
-            <div class="summary-card"><strong>${label}</strong><span>${escapeHtml(label === 'Region' ? analysis.region : analysis.period || 'Unknown')}</span></div>
+            <div class="summary-card"><strong>${label}</strong><span class="summary-value-text">${escapeHtml(label === 'Region' ? analysis.region : analysis.period || 'Unknown')}</span></div>
             <div class="summary-card ${analysis.findings > 0 ? 'bad' : 'good'}"><strong>Findings</strong><span>${analysis.findings}</span></div>
             <div class="summary-card ${analysis.alerts > 0 ? 'bad' : 'good'}"><strong>Alerts</strong><span>${analysis.alerts}</span></div>
             <div class="summary-card ${analysis.warnings > 0 ? 'warn' : ''}"><strong>Warnings</strong><span>${analysis.warnings}</span></div>

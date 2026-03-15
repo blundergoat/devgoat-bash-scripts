@@ -84,7 +84,7 @@ function tunnelCss(): string
 
 .tp-title {
     font-size: 18px;
-    font-weight: 700;
+    font-weight: 600;
     margin-bottom: 4px;
     display: flex;
     align-items: center;
@@ -115,13 +115,13 @@ function tunnelCss(): string
     box-shadow: var(--shadow-panel);
 }
 .tp-card-title {
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--c-text-faint);
+    letter-spacing: 0.1em;
+    color: var(--c-text-muted);
     margin-bottom: 12px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
 }
 
 .tp-status-row {
@@ -138,7 +138,7 @@ function tunnelCss(): string
 }
 .tp-status-dot.active { background: var(--c-green); }
 .tp-status-dot.inactive { background: var(--c-text-faint); opacity: 0.4; }
-.tp-status-label { font-size: 13px; font-weight: 700; }
+.tp-status-label { font-size: 13px; font-weight: 600; }
 .tp-status-url {
     font-size: 14px;
     font-weight: 600;
@@ -194,7 +194,7 @@ function tunnelCss(): string
     min-height: 32px;
     padding: 0 12px;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 600;
     font-family: inherit;
     border-radius: 8px;
     cursor: pointer;
@@ -210,7 +210,7 @@ function tunnelCss(): string
     background: var(--c-accent);
     color: #fff;
     border-color: var(--c-accent);
-    font-weight: 700;
+    font-weight: 600;
 }
 .tp-btn.primary:hover { background: var(--c-accent-hover); }
 .tp-btn.danger {
@@ -228,7 +228,7 @@ function tunnelCss(): string
     min-height: 32px;
     padding: 0 12px;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
     box-shadow: var(--shadow-sm);
 }
@@ -248,13 +248,13 @@ function tunnelCss(): string
     border: 1px solid var(--c-border);
 }
 .tp-example-label {
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--c-text-faint);
+    letter-spacing: 0.1em;
+    color: var(--c-text-muted);
     margin-bottom: 6px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
 }
 .tp-example-value {
     font-size: 11px;
@@ -356,25 +356,25 @@ function tunnelCss(): string
 .tp-target-row input:focus { border-color: var(--c-accent); }
 .tp-target-row input::placeholder { color: var(--c-text-faint); }
 .tp-target-row label {
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--c-text-faint);
-    font-family: var(--font-mono);
+    letter-spacing: 0.1em;
+    color: var(--c-text-muted);
+    font-family: var(--font-sans);
     white-space: nowrap;
 }
 
 /* Recent URLs */
 .tp-recent { margin-top: 12px; }
 .tp-recent-label {
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--c-text-faint);
+    letter-spacing: 0.1em;
+    color: var(--c-text-muted);
     margin-bottom: 6px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
 }
 .tp-recent-chips {
     display: flex;

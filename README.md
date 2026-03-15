@@ -133,6 +133,15 @@ shellcheck lib/path/to/script.sh
 ./preflight-checks.sh
 ```
 
+### Secret Scanning (optional, manual setup)
+
+```bash
+# Install gitleaks for your platform, then:
+# Create ~/.git-hooks/pre-commit that runs: gitleaks git --staged --no-banner
+# Set: git config --global core.hooksPath ~/.git-hooks
+# Note: --global affects ALL repos on this machine
+```
+
 ## License
 
 [MIT](LICENSE)
