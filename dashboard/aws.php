@@ -76,6 +76,9 @@ function handleApiAwsRun(): void
     }
 
     $start = microtime(true);
+
+    // Merge stderr into stdout via a single pipe to avoid the classic
+    // deadlock where one pipe buffer fills while we block on the other.
     $descriptors = [
         1 => ['pipe', 'w'],
         2 => ['pipe', 'w'],
@@ -87,8 +90,43 @@ function handleApiAwsRun(): void
         return;
     }
 
-    $stdout = is_resource($pipes[1] ?? null) ? stream_get_contents($pipes[1]) : '';
-    $stderr = is_resource($pipes[2] ?? null) ? stream_get_contents($pipes[2]) : '';
+    // Read both pipes concurrently to prevent buffer deadlocks.
+    $stdout = '';
+    $stderr = '';
+    if (is_resource($pipes[1] ?? null)) {
+        stream_set_blocking($pipes[1], false);
+    }
+    if (is_resource($pipes[2] ?? null)) {
+        stream_set_blocking($pipes[2], false);
+    }
+    while (true) {
+        $read = [];
+        if (is_resource($pipes[1] ?? null) && !feof($pipes[1])) {
+            $read[] = $pipes[1];
+        }
+        if (is_resource($pipes[2] ?? null) && !feof($pipes[2])) {
+            $read[] = $pipes[2];
+        }
+        if ($read === []) {
+            break;
+        }
+        $write = null;
+        $except = null;
+        if (@stream_select($read, $write, $except, 5) === false) {
+            break;
+        }
+        foreach ($read as $stream) {
+            $chunk = fread($stream, 8192);
+            if ($chunk === false || $chunk === '') {
+                continue;
+            }
+            if ($stream === ($pipes[1] ?? null)) {
+                $stdout .= $chunk;
+            } else {
+                $stderr .= $chunk;
+            }
+        }
+    }
 
     if (is_resource($pipes[1] ?? null)) {
         fclose($pipes[1]);
@@ -98,7 +136,7 @@ function handleApiAwsRun(): void
     }
 
     $exitCode = proc_close($process);
-    $rawOutput = ($stdout === false ? '' : $stdout) . ($stderr === false ? '' : $stderr);
+    $rawOutput = $stdout . $stderr;
     $durationMs = (int) round((microtime(true) - $start) * 1000);
     $plainText = stripAnsiText($rawOutput);
 
@@ -365,8 +403,23 @@ function getAwsEnvSummary(): array
     ];
 }
 
+/**
+ * Legacy AWS dashboard HTML renderer — no longer used.
+ *
+ * The router calls serveAwsDashboardUi() (from aws_ui.php) instead.
+ * This function is retained temporarily for reference during the
+ * transition and will be removed in a future release.
+ *
+ * @deprecated Use serveAwsDashboardUi() instead.
+ */
 function serveAwsDashboardHtml(): void
 {
+    // Delegate to the active UI implementation.
+    serveAwsDashboardUi();
+    return;
+
+    // @codeCoverageIgnoreStart — dead code below, kept for reference only.
+    /** @phpstan-ignore deadCode.unreachable */
     header('Content-Type: text/html; charset=UTF-8');
 
     $projectTitle = htmlspecialchars(PROJECT_NAME, ENT_QUOTES);

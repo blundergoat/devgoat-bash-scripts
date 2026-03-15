@@ -428,12 +428,12 @@ while IFS= read -r cluster_arn; do
 
             if [[ "$ecs_cpu_int" -lt "$CPU_LOW" && "$ecs_mem_int" -lt "$MEM_LOW" && "$cpu" != "256" ]]; then
                 # Suggest downsizing — find valid Fargate combo
-                case "${cpu}|${mem}" in
-                    4096|*)  suggest="2048 CPU / $(echo "scale=0; $mem / 2" | bc) MB" ;;
-                    2048|*)  suggest="1024 CPU / $(echo "scale=0; $mem / 2" | bc) MB" ;;
-                    1024|*)  suggest="512 CPU / $(echo "scale=0; $mem / 2" | bc) MB" ;;
-                    512|*)   suggest="256 CPU / 512 MB" ;;
-                    *)       suggest="one size smaller" ;;
+                case "${cpu}" in
+                    4096)  suggest="2048 CPU / $(echo "scale=0; $mem / 2" | bc) MB" ;;
+                    2048)  suggest="1024 CPU / $(echo "scale=0; $mem / 2" | bc) MB" ;;
+                    1024)  suggest="512 CPU / $(echo "scale=0; $mem / 2" | bc) MB" ;;
+                    512)   suggest="256 CPU / 512 MB" ;;
+                    *)     suggest="one size smaller" ;;
                 esac
                 new_cpu_vcpu=$(echo "scale=2; $cpu / 2 / 1024" | bc)
                 new_mem_gb=$(echo "scale=2; $mem / 2 / 1024" | bc)

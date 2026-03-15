@@ -492,9 +492,9 @@ echo ""
 # ═════════════════════════════════════════════════════════════
 echo -e "${BOLD}${BLUE}═══════════════════════════════════════════════════════════════${NC}"
 
-alert_count=$(grep -c '^alert|' "$FINDINGS_FILE" 2>/dev/null || echo "0")
-warn_count=$(grep -c '^warn|' "$FINDINGS_FILE" 2>/dev/null || echo "0")
-info_count=$(grep -c '^info|' "$FINDINGS_FILE" 2>/dev/null || echo "0")
+alert_count=$(grep -c '^alert|' "$FINDINGS_FILE" 2>/dev/null || true)
+warn_count=$(grep -c '^warn|' "$FINDINGS_FILE" 2>/dev/null || true)
+info_count=$(grep -c '^info|' "$FINDINGS_FILE" 2>/dev/null || true)
 total_findings=$((alert_count + warn_count + info_count))
 
 if [[ "$total_findings" -eq 0 ]]; then
