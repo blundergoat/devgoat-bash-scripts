@@ -11,6 +11,7 @@ AWS_REGION="${AWS_REGION:-us-east-1}"
 # ---- END CONFIGURATION ----
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/_aws-common.sh"
 
 show_help() {

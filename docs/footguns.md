@@ -93,3 +93,13 @@ These patterns are tied to the directory structure. Copying a stacks script into
 **Why it happens:** In bash, `((var++))` is post-increment - it returns the value **before** incrementing. When `var` is 0, the expression evaluates to 0 (falsy), returning exit status 1. Under `set -e`, this aborts the script.
 
 **Prevention:** Use `var=$((var + 1))` or `((var += 1))` instead of `((var++))`. These always return truthy because the assignment itself succeeds.
+
+---
+
+## Footgun: Dashboard parsers must treat report sections as optional
+
+**Symptoms:** A dashboard report table absorbs rows from a later section, or a multi-month report shows only the first month inside its "total" summary.
+
+**Why it happens:** Some dashboard surfaces parse human-readable shell output from other domains by matching section headings. If the parser assumes an optional middle section always exists, or assumes a `TOTAL` row contains only one amount, the parsed data drifts as soon as the script output shape varies. This happened with the AWS cost report when `EC2 - OTHER BREAKDOWN` was absent and when the `TOTAL` row contained one value per month.
+
+**Prevention:** When parsing cross-domain report output, stop a section on every possible subsequent heading, not just the most common one. For aggregate rows, parse every numeric cell that belongs to the row instead of assuming a single value. If the dashboard depends on stable structure, prefer a machine-readable mode over scraping human-readable output.

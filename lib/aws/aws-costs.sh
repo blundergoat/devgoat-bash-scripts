@@ -11,6 +11,7 @@ AWS_REGION="${AWS_REGION:-us-east-1}"
 # ---- END CONFIGURATION ----
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/_aws-common.sh"
 
 show_help() {
@@ -304,7 +305,7 @@ else
             cost="${service_costs["$service|$month"]:-}"
             if [[ -n "$cost" ]]; then
                 row+="$(printf '%12s' "$(printf '$%0.2f' "$cost")")"
-                month_totals[$month_idx]="$(echo "${month_totals[$month_idx]} + $cost" | bc -l)"
+                month_totals[month_idx]="$(echo "${month_totals[month_idx]} + $cost" | bc -l)"
             else
                 row+="$(printf '%12s' "—")"
             fi
@@ -474,7 +475,7 @@ else
 fi
 
 echo -e "${BOLD}  Application Load Balancers${NC}"
-alb_json="$(aws elbv2 describe-load-balancers --query 'LoadBalancers[?Type==`application`].{name:LoadBalancerName,state:State.Code}' --output json 2>/dev/null || echo '[]')"
+alb_json="$(aws elbv2 describe-load-balancers --query "LoadBalancers[?Type==\`application\`].{name:LoadBalancerName,state:State.Code}" --output json 2>/dev/null || echo '[]')"
 if [[ "$(jq 'length' <<<"$alb_json")" -eq 0 ]]; then
     echo -e "    ${DIM}(none)${NC}"
 else

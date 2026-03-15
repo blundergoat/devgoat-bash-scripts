@@ -633,6 +633,7 @@ let state = {
     eventSource: null,     // active EventSource for SSE streaming, null when idle
     autoScroll: true,      // auto-scroll terminal to bottom on new output
     pendingCallback: null, // callback to execute when modal is confirmed, null when no modal
+    stopRequested: false,  // set when the user cancels a run before the stream closes
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -759,6 +760,7 @@ async function runScript(scriptId, arg) {
         state.runningId = data.id;
         state.runningScriptId = scriptId;
         state.startedAt = Date.now();
+        state.stopRequested = false;
 
         // Resolve the display label (show cmd + args rather than just the script ID)
         let label = scriptId;
@@ -794,15 +796,20 @@ function connectStream(id) {
     es.addEventListener('done', () => {
         const elapsedSecs = state.startedAt ? ((Date.now() - state.startedAt) / 1000) : 0;
         const duration = elapsedSecs < 1 ? '<1s' : elapsedSecs < 60 ? Math.round(elapsedSecs) + 's' : Math.floor(elapsedSecs/60) + 'm ' + Math.round(elapsedSecs%60) + 's';
-        appendToTerminal(`\n<span class="ansi-green ansi-bold">\u2714 Done</span> <span class="ansi-dim">in ${duration}</span>\n`);
-        const alertDiv = document.getElementById('terminalAlert');
-        alertDiv.style.display = 'block';
-        alertDiv.innerHTML = '<div class="result-alert success" style="margin:0 12px;border-radius:0 0 8px 8px"><div><span class="alert-title">\u2714 Done in ' + esc(duration) + '</span></div><button class="alert-dismiss" onclick="this.closest(\'.result-alert\').parentElement.style.display=\'none\'">&times;</button></div>';
-        setRunningState(false, null, duration);
+        if (!state.stopRequested) {
+            appendToTerminal(`\n<span class="ansi-green ansi-bold">\u2714 Done</span> <span class="ansi-dim">in ${duration}</span>\n`);
+            const alertDiv = document.getElementById('terminalAlert');
+            alertDiv.style.display = 'block';
+            alertDiv.innerHTML = '<div class="result-alert success" style="margin:0 12px;border-radius:0 0 8px 8px"><div><span class="alert-title">\u2714 Done in ' + esc(duration) + '</span></div><button class="alert-dismiss" onclick="this.closest(\'.result-alert\').parentElement.style.display=\'none\'">&times;</button></div>';
+            setRunningState(false, null, duration);
+        } else {
+            setRunningState(false);
+        }
         es.close();
         state.eventSource = null;
         state.runningId = null;
         state.runningScriptId = null;
+        state.stopRequested = false;
         updateButtons();
     });
 
@@ -816,6 +823,7 @@ function connectStream(id) {
                 setRunningState(false);
                 state.runningId = null;
                 state.runningScriptId = null;
+                state.stopRequested = false;
                 updateButtons();
             }
         }, 2000);
@@ -827,7 +835,11 @@ async function stopScript() {
     stopBtn.disabled = true;
     stopBtn.textContent = 'Stopping\u2026';
     try {
-        await fetch(`/api/stop/${state.runningId}`, { method: 'POST' });
+        const resp = await fetch(`/api/stop/${state.runningId}`, { method: 'POST' });
+        if (!resp.ok) {
+            throw new Error('Stop request failed');
+        }
+        state.stopRequested = true;
         appendToTerminal('\n<span class="ansi-yellow">\u2500\u2500 Stopped \u2500\u2500</span>\n');
         const alertDiv = document.getElementById('terminalAlert');
         alertDiv.style.display = 'block';
@@ -890,7 +902,7 @@ terminal.addEventListener('scroll', () => {
     state.autoScroll = terminal.scrollTop + terminal.clientHeight >= terminal.scrollHeight - 50;
 });
 
-function clearTerminal() { terminal.innerHTML = ''; document.getElementById('terminalAlert').style.display = 'none'; }
+function clearTerminal() { terminal.innerHTML = ''; document.getElementById('terminalAlert').style.display = 'none'; state.stopRequested = false; }
 
 /** Copy terminal text content to clipboard (strips HTML/ANSI spans). */
 function copyOutput() {

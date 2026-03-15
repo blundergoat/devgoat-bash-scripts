@@ -5,17 +5,28 @@
 # are NOT standalone templates. If copying them to another project, also copy this
 # file and preserve the relative path, or inline the helpers you need.
 
+set -euo pipefail
+
 if [[ -n "${_AWS_COMMON_LOADED:-}" ]]; then
-    return 0 2>/dev/null || exit 0
+    if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+        return 0
+    fi
+    exit 0
 fi
 _AWS_COMMON_LOADED=1
 
+# shellcheck disable=SC2034
 RED='\033[0;31m'
+# shellcheck disable=SC2034
 GREEN='\033[0;32m'
+# shellcheck disable=SC2034
 YELLOW='\033[1;33m'
+# shellcheck disable=SC2034
 BLUE='\033[0;34m'
+# shellcheck disable=SC2034
 CYAN='\033[0;36m'
 BOLD='\033[1m'
+# shellcheck disable=SC2034
 DIM='\033[2m'
 NC='\033[0m'
 
@@ -57,8 +68,7 @@ load_env_file() {
                 value="${BASH_REMATCH[1]}"
             fi
 
-            printf -v "$key" '%s' "$value"
-            export "$key"
+            declare -gx "$key=$value"
         fi
     done < "$ENV_FILE"
 }

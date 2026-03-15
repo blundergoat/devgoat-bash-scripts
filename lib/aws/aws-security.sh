@@ -11,6 +11,7 @@ AWS_REGION="${AWS_REGION:-us-east-1}"
 # ---- END CONFIGURATION ----
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/_aws-common.sh"
 
 show_help() {
@@ -263,7 +264,6 @@ echo ""
 iam_users=$(aws iam list-users --query 'Users[*].UserName' --output json 2>/dev/null || echo '[]')
 user_count=$(echo "$iam_users" | jq 'length')
 no_mfa_count=0
-old_key_count=0
 
 if [[ "$user_count" -eq 0 ]]; then
     echo -e "    ${DIM}No IAM users found${NC}"
@@ -287,7 +287,7 @@ else
             printf "    %-25s %b     %-15s %-10s\n" "$user" "$mfa_status" "—" "—"
         else
             first=true
-            echo "$key_info" | jq -r '.AccessKeyMetadata[] | select(.Status == "Active") | "\(.AccessKeyId)|\(.CreateDate)"' | while IFS='|' read -r key_id created; do
+            echo "$key_info" | jq -r '.AccessKeyMetadata[] | select(.Status == "Active") | "\(.AccessKeyId)|\(.CreateDate)"' | while IFS='|' read -r _ created; do
                 # GNU date (Linux) then BSD date (macOS) fallback
                 created_epoch=$(date -d "$created" +%s 2>/dev/null \
                     || date -j -f "%Y-%m-%dT%H:%M:%S%z" "${created/Z/+0000}" +%s 2>/dev/null \
@@ -370,7 +370,7 @@ echo -e "${DIM}  ─────────────────────
 echo ""
 
 public_rds=$(aws rds describe-db-instances \
-    --query 'DBInstances[?PubliclyAccessible==`true`].DBInstanceIdentifier' \
+    --query "DBInstances[?PubliclyAccessible==\`true\`].DBInstanceIdentifier" \
     --output json 2>/dev/null || echo '[]')
 public_rds_count=$(echo "$public_rds" | jq 'length')
 
@@ -425,7 +425,7 @@ no_rotation_count=0
 if [[ "$secret_count" -eq 0 ]]; then
     echo -e "    ${DIM}No secrets found${NC}"
 else
-    while IFS='|' read -r name rotation_enabled last_rotated; do
+    while IFS='|' read -r name rotation_enabled _last_rotated; do
         if [[ "$rotation_enabled" != "true" ]]; then
             echo -e "    ${YELLOW}⚠${NC}  $name — ${YELLOW}No auto-rotation${NC}"
             no_rotation_count=$((no_rotation_count + 1))

@@ -17,6 +17,7 @@ CONN_LOW="${CONN_LOW:-5}"
 # ---- END CONFIGURATION ----
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/_aws-common.sh"
 
 show_help() {
@@ -83,7 +84,7 @@ require_cmd jq "Install jq: https://jqlang.github.io/jq/download/"
 require_cmd bc "Install bc via your package manager."
 require_aws_auth
 
-START_TIME=$(date -u -d "$DAYS days ago" +%Y-%m-%dT%H:%M:%S 2>/dev/null || date -u -v-${DAYS}d +%Y-%m-%dT%H:%M:%S)
+START_TIME=$(date -u -d "$DAYS days ago" +%Y-%m-%dT%H:%M:%S 2>/dev/null || date -u -v-"${DAYS}"d +%Y-%m-%dT%H:%M:%S)
 END_TIME=$(date -u +%Y-%m-%dT%H:%M:%S)
 # Period in seconds: use 1-hour intervals for <= 7 days, 6-hour for longer
 if [[ "$DAYS" -le 7 ]]; then
@@ -96,10 +97,9 @@ fi
 get_metric() {
     local namespace="$1" metric="$2" stat="$3" dim_name="$4" dim_value="$5"
     local dim_name2="${6:-}" dim_value2="${7:-}"
-
-    local dimensions="Name=$dim_name,Value=$dim_value"
+    local dimension_args=("--dimensions" "Name=$dim_name,Value=$dim_value")
     if [[ -n "$dim_name2" ]]; then
-        dimensions+=" Name=$dim_name2,Value=$dim_value2"
+        dimension_args+=("Name=$dim_name2,Value=$dim_value2")
     fi
 
     aws cloudwatch get-metric-statistics \
@@ -109,8 +109,7 @@ get_metric() {
         --end-time "$END_TIME" \
         --period "$PERIOD" \
         --statistics "$stat" \
-        --dimensions $dimensions \ # intentional word-split: multiple Name=...,Value=... pairs
-
+        "${dimension_args[@]}" \
         --output json 2>/dev/null
 }
 
@@ -144,7 +143,8 @@ print_bar() {
     fi
 
     local bar_width=30
-    local filled=$(echo "scale=0; $pct * $bar_width / 100" | bc)
+    local filled
+    filled=$(echo "scale=0; $pct * $bar_width / 100" | bc)
     if [[ "$filled" -gt "$bar_width" ]]; then filled=$bar_width; fi
 
     local bar=""
@@ -458,13 +458,13 @@ echo ""
 echo -e "${BOLD}${CYAN}  APPLICATION LOAD BALANCERS${NC}"
 echo -e "${DIM}  ─────────────────────────────────────────────────────────────${NC}"
 
-albs=$(aws elbv2 describe-load-balancers --query 'LoadBalancers[?Type==`application`]' --output json 2>/dev/null || echo '[]')
+albs=$(aws elbv2 describe-load-balancers --query "LoadBalancers[?Type==\`application\`]" --output json 2>/dev/null || echo '[]')
 alb_count=$(echo "$albs" | jq 'length')
 
 for i in $(seq 0 $((alb_count - 1))); do
     alb_name=$(echo "$albs" | jq -r ".[$i].LoadBalancerName")
     alb_arn=$(echo "$albs" | jq -r ".[$i].LoadBalancerArn")
-    alb_arn_suffix=$(echo "$alb_arn" | sed 's|.*loadbalancer/||')
+    alb_arn_suffix="${alb_arn#*loadbalancer/}"
 
     echo ""
     echo -e "    ${BOLD}$alb_name${NC}"
@@ -593,7 +593,7 @@ echo -e "${DIM}  ─────────────────────
 
 ec2_raw=$(aws ec2 describe-instances \
     --filters "Name=instance-state-name,Values=running,stopped" \
-    --query 'Reservations[*].Instances[*].{id:InstanceId,type:InstanceType,state:State.Name,name:Tags[?Key==`Name`].Value|[0],launch:LaunchTime}' \
+    --query "Reservations[*].Instances[*].{id:InstanceId,type:InstanceType,state:State.Name,name:Tags[?Key==\`Name\`].Value|[0],launch:LaunchTime}" \
     --output json 2>/dev/null || echo '[]')
 ec2_instances=$(echo "$ec2_raw" | jq 'flatten')
 ec2_count=$(echo "$ec2_instances" | jq 'length')
@@ -651,7 +651,7 @@ echo ""
 echo -e "${BOLD}${CYAN}  CLOUDWATCH LOG GROUPS${NC}"
 echo -e "${DIM}  ─────────────────────────────────────────────────────────────${NC}"
 
-log_groups=$(aws logs describe-log-groups --query 'logGroups[?storedBytes > `0`].{name:logGroupName,bytes:storedBytes,retention:retentionInDays}' --output json 2>/dev/null || echo '[]')
+log_groups=$(aws logs describe-log-groups --query "logGroups[?storedBytes > \`0\`].{name:logGroupName,bytes:storedBytes,retention:retentionInDays}" --output json 2>/dev/null || echo '[]')
 log_count=$(echo "$log_groups" | jq 'length')
 
 if [[ "$log_count" -gt 0 ]]; then

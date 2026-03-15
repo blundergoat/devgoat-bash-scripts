@@ -1017,16 +1017,49 @@ function parseSecurityAnalysis(result) {
     };
 }
 
+function extractReportSection(text, startHeading, endHeadings = []) {
+    const lines = String(text || '').split('\n');
+    const stopHeadings = new Set(endHeadings);
+    let startIndex = -1;
+
+    for (let index = 0; index < lines.length; index += 1) {
+        if (lines[index].trim() === startHeading) {
+            startIndex = index + 1;
+            break;
+        }
+    }
+
+    if (startIndex === -1) {
+        return [];
+    }
+
+    const section = [];
+    for (let index = startIndex; index < lines.length; index += 1) {
+        const trimmed = lines[index].trim();
+        if (stopHeadings.has(trimmed)) {
+            break;
+        }
+        section.push(lines[index]);
+    }
+
+    return section;
+}
+
 function parseCostAnalysis(result) {
     const text = result?.text || '';
     const periodMatch = text.match(/Period:\s*([0-9-]+)\s*->\s*([0-9-]+)/i);
-    const totalMatch = text.match(/TOTAL\s+\$([0-9,.]+)/i);
-    const serviceSection = text.includes('COSTS BY SERVICE')
-        ? text.split('COSTS BY SERVICE')[1].split('EC2 - OTHER BREAKDOWN')[0]
-        : '';
-    const lines = serviceSection.split('\n').map((line) => line.trimEnd()).filter(Boolean);
+    const lines = extractReportSection(text, 'COSTS BY SERVICE', [
+        'EC2 - OTHER BREAKDOWN',
+        'RESOURCE INVENTORY',
+        'INVENTORY SUMMARY',
+    ]).map((line) => line.trimEnd()).filter(Boolean);
     const headerLine = lines.find((line) => line.includes('Service')) || '';
     const monthColumns = [...headerLine.matchAll(/\d{4}-\d{2}/g)].map((match) => match[0]);
+    const totalLine = lines.find((line) => line.trimStart().startsWith('TOTAL')) || '';
+    const totalValue = [...totalLine.matchAll(/\$([0-9,.]+)/g)].reduce((sum, match) => {
+        const parsed = Number((match[1] || '0').replace(/,/g, ''));
+        return Number.isFinite(parsed) ? sum + parsed : sum;
+    }, 0);
     const rows = [];
 
     for (const line of lines) {
@@ -1041,8 +1074,8 @@ function parseCostAnalysis(result) {
         rows.push({ name, amounts });
     }
 
-    const inventorySection = text.includes('INVENTORY SUMMARY') ? text.split('INVENTORY SUMMARY')[1] : '';
-    const resourceCount = inventorySection.split('\n').reduce((sum, line) => {
+    const inventoryLines = extractReportSection(text, 'INVENTORY SUMMARY');
+    const resourceCount = inventoryLines.reduce((sum, line) => {
         if (/\$/.test(line)) return sum;
         const match = line.match(/([0-9]+)\s*$/);
         return match ? sum + Number(match[1]) : sum;
@@ -1064,7 +1097,7 @@ function parseCostAnalysis(result) {
     return {
         start: periodMatch?.[1] || '',
         end: periodMatch?.[2] || '',
-        total: totalMatch?.[1] || '',
+        total: totalLine ? totalValue.toFixed(2) : '',
         serviceCount: rows.length,
         resourceCount,
         topService: rows[0]?.name || '',
