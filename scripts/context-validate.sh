@@ -51,6 +51,19 @@ check_required_heading() {
     fi
 }
 
+is_optional_runtime_path() {
+    local path="$1"
+
+    case "$path" in
+        tasks/todo.md|tasks/handoff.md)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 check_router_targets() {
     local agents_file="$REPO_ROOT/AGENTS.md"
     local in_router=false
@@ -84,6 +97,8 @@ check_router_targets() {
             if ! compgen -G "$REPO_ROOT/$path" > /dev/null; then
                 fail "Router target missing: $path"
             fi
+        elif is_optional_runtime_path "$path" && [[ ! -e "$REPO_ROOT/$path" ]]; then
+            warn "Optional local runtime file absent in this checkout: $path"
         elif [[ ! -e "$REPO_ROOT/$path" ]]; then
             fail "Router target missing: $path"
         fi
@@ -185,8 +200,13 @@ check_tasks() {
     local todo_file="$REPO_ROOT/tasks/todo.md"
     local handoff_file="$REPO_ROOT/tasks/handoff.md"
 
-    [[ -f "$todo_file" ]] || fail "Missing runtime task file: tasks/todo.md"
-    [[ -f "$handoff_file" ]] || fail "Missing runtime task file: tasks/handoff.md"
+    if [[ ! -f "$todo_file" ]]; then
+        warn "Optional local runtime file absent in this checkout: tasks/todo.md"
+    fi
+
+    if [[ ! -f "$handoff_file" ]]; then
+        warn "Optional local runtime file absent in this checkout: tasks/handoff.md"
+    fi
 }
 
 check_evals() {
@@ -225,7 +245,7 @@ check_evals
 
 if (( FAILURES > 0 )); then
     echo ""
-    fail "Context validation failed with $FAILURES issue(s)"
+    echo -e "${RED}[fail]${NC} Context validation failed with $FAILURES issue(s)" >&2
     exit 1
 fi
 

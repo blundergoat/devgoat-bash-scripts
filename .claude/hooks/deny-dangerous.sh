@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 # PreToolUse hook: deny dangerous commands
 # Exit 2 = block with message. Exit 0 = allow.
+# Omits -e so every check runs and the final exit 0 is always reached.
 
 set -uo pipefail
 
 INPUT=$(cat)
-COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
+
+# Extract command — try jq first, fall back to grep+sed if jq is missing
+if command -v jq &>/dev/null; then
+    COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
+else
+    COMMAND=$(echo "$INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/^"command"[[:space:]]*:[[:space:]]*"//;s/"$//' 2>/dev/null || true)
+fi
 
 [[ -z "$COMMAND" ]] && exit 0
 
@@ -17,8 +24,8 @@ if echo "$COMMAND" | grep -qE 'rm\s+-[a-zA-Z]*r[a-zA-Z]*f|rm\s+-[a-zA-Z]*f[a-zA-
     fi
 fi
 
-# Force push
-if echo "$COMMAND" | grep -qE 'git\s+push\s+.*--force(?!-with-lease)'; then
+# Force push (allow --force-with-lease)
+if echo "$COMMAND" | grep -qE 'git\s+push\s+.*--force' && ! echo "$COMMAND" | grep -qF 'force-with-lease'; then
     echo "BLOCKED: git push --force. Use --force-with-lease instead." >&2
     exit 2
 fi
