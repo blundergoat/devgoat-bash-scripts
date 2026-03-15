@@ -181,7 +181,7 @@ cleanup() {
     if [[ -f "${pid_file}" ]]; then
         local pid
         pid=$(<"${pid_file}")
-        if [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null; then
+        if [[ "${pid}" =~ ^[0-9]+$ ]] && kill -0 "${pid}" 2>/dev/null; then
             log "Stopping cloudflared tunnel (pid ${pid})..."
             kill -15 "-${pid}" 2>/dev/null || true
             kill -15 "${pid}" 2>/dev/null || true

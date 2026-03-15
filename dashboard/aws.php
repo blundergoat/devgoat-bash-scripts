@@ -77,8 +77,9 @@ function handleApiAwsRun(): void
 
     $start = microtime(true);
 
-    // Merge stderr into stdout via a single pipe to avoid the classic
-    // deadlock where one pipe buffer fills while we block on the other.
+    // Capture stdout and stderr in separate pipes and read both concurrently
+    // to avoid the classic deadlock where one pipe buffer fills while we
+    // block on the other.
     $descriptors = [
         1 => ['pipe', 'w'],
         2 => ['pipe', 'w'],

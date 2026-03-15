@@ -232,7 +232,8 @@ function tunnelCss(): string
     cursor: pointer;
     box-shadow: var(--shadow-sm);
 }
-.tp-copy.copied {
+.tp-copy.copied,
+.tp-btn.copied {
     color: var(--c-green);
     border-color: var(--c-green);
     background: rgba(22,163,74,0.12);

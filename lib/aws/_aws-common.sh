@@ -26,8 +26,6 @@ PROJECT_ROOT="$(
 )"
 ENV_FILE="$PROJECT_ROOT/.env"
 
-_env_file_has_aws_session_token=false
-
 trim_leading_whitespace() {
     local value="$1"
     printf '%s' "${value#"${value%%[![:space:]]*}"}"
@@ -57,10 +55,6 @@ load_env_file() {
                 value="${BASH_REMATCH[1]}"
             elif [[ "$value" =~ ^\'(.*)\'$ ]]; then
                 value="${BASH_REMATCH[1]}"
-            fi
-
-            if [[ "$key" == "AWS_SESSION_TOKEN" ]]; then
-                _env_file_has_aws_session_token=true
             fi
 
             printf -v "$key" '%s' "$value"
@@ -129,7 +123,7 @@ ensure_aws_cli() {
 show_aws_auth_help() {
     echo "To fix this, either:"
     echo "  1. Put AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in .env"
-    echo "  2. Run: aws sso login --profile ${AWS_PROFILE_NAME}"
+    echo "  2. Run: aws sso login --profile ${AWS_PROFILE:-$AWS_PROFILE_NAME}"
 }
 
 require_aws_auth() {

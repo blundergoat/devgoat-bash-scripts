@@ -202,7 +202,7 @@ echo -e "${DIM}  ─────────────────────
 open_sgs=$(aws ec2 describe-security-groups \
     --filters "Name=ip-permission.cidr,Values=0.0.0.0/0" \
     --query 'SecurityGroups[*].{id:GroupId,name:GroupName,desc:Description,perms:IpPermissions}' \
-    --output json 2>/dev/null)
+    --output json 2>/dev/null || echo '[]')
 open_sg_count=$(echo "$open_sgs" | jq 'length')
 
 if [[ "$open_sg_count" -eq 0 ]]; then
@@ -366,7 +366,7 @@ echo ""
 
 public_rds=$(aws rds describe-db-instances \
     --query 'DBInstances[?PubliclyAccessible==`true`].DBInstanceIdentifier' \
-    --output json 2>/dev/null)
+    --output json 2>/dev/null || echo '[]')
 public_rds_count=$(echo "$public_rds" | jq 'length')
 
 if [[ "$public_rds_count" -eq 0 ]]; then
@@ -390,7 +390,7 @@ echo ""
 unencrypted_ebs=$(aws ec2 describe-volumes \
     --filters "Name=encrypted,Values=false" \
     --query 'Volumes[*].{id:VolumeId,size:Size,type:VolumeType}' \
-    --output json 2>/dev/null)
+    --output json 2>/dev/null || echo '[]')
 unencrypted_count=$(echo "$unencrypted_ebs" | jq 'length')
 
 if [[ "$unencrypted_count" -eq 0 ]]; then

@@ -109,7 +109,8 @@ get_metric() {
         --end-time "$END_TIME" \
         --period "$PERIOD" \
         --statistics "$stat" \
-        --dimensions $dimensions \
+        --dimensions $dimensions \ # intentional word-split: multiple Name=...,Value=... pairs
+
         --output json 2>/dev/null
 }
 
@@ -349,12 +350,12 @@ while IFS= read -r cluster_arn; do
     while IFS= read -r service_arn; do
         service_name=$(echo "$service_arn" | rev | cut -d'/' -f1 | rev)
         service_info=$(aws ecs describe-services --cluster "$cluster_name" --services "$service_name" \
-            --query 'services[0].{desired:desiredCount,running:runningCount,taskDef:taskDefinition}' --output json 2>/dev/null)
+            --query 'services[0].{desired:desiredCount,running:runningCount,taskDef:taskDefinition}' --output json 2>/dev/null || echo '{}')
         task_def=$(echo "$service_info" | jq -r '.taskDef')
         desired=$(echo "$service_info" | jq -r '.desired')
         running=$(echo "$service_info" | jq -r '.running')
         task_spec=$(aws ecs describe-task-definition --task-definition "$task_def" \
-            --query 'taskDefinition.{cpu:cpu,memory:memory,containers:containerDefinitions[*].name}' --output json 2>/dev/null)
+            --query 'taskDefinition.{cpu:cpu,memory:memory,containers:containerDefinitions[*].name}' --output json 2>/dev/null || echo '{}')
         cpu=$(echo "$task_spec" | jq -r '.cpu')
         mem=$(echo "$task_spec" | jq -r '.memory')
         containers=$(echo "$task_spec" | jq -r '.containers | join(", ")')
@@ -590,10 +591,11 @@ echo ""
 echo -e "${BOLD}${CYAN}  EC2 INSTANCES${NC}"
 echo -e "${DIM}  ─────────────────────────────────────────────────────────────${NC}"
 
-ec2_instances=$(aws ec2 describe-instances \
+ec2_raw=$(aws ec2 describe-instances \
     --filters "Name=instance-state-name,Values=running,stopped" \
     --query 'Reservations[*].Instances[*].{id:InstanceId,type:InstanceType,state:State.Name,name:Tags[?Key==`Name`].Value|[0],launch:LaunchTime}' \
-    --output json 2>/dev/null | jq 'flatten')
+    --output json 2>/dev/null || echo '[]')
+ec2_instances=$(echo "$ec2_raw" | jq 'flatten')
 ec2_count=$(echo "$ec2_instances" | jq 'length')
 
 if [[ "$ec2_count" -eq 0 ]]; then
