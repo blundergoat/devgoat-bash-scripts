@@ -58,6 +58,9 @@ if (!defined('SENTINEL')) {
 if (!defined('TIMINGS_FILE')) {
     define('TIMINGS_FILE', TMP_DIR . '/timings.json');
 }
+if (!defined('TUNNEL_STATE_FILE')) {
+    define('TUNNEL_STATE_FILE', TMP_DIR . '/tunnel-state.json');
+}
 
 // Environment name: from env var, or infer from grandparent directory name
 // (e.g. /srv/deploy/my-project → "deploy"), or fall back to 'local'
@@ -83,7 +86,9 @@ if (!is_dir(TMP_DIR)) {
 // When true, the UI shows a banner prompting the user to customize it.
 $configFile = __DIR__ . '/config.php';
 $exampleFile = __DIR__ . '/config.example.php';
-$isExampleConfig = file_exists($exampleFile) && file_get_contents($configFile) === file_get_contents($exampleFile);
+$isExampleConfig = file_exists($configFile)
+    && file_exists($exampleFile)
+    && file_get_contents($configFile) === file_get_contents($exampleFile);
 if (!defined('IS_EXAMPLE_CONFIG')) {
     define('IS_EXAMPLE_CONFIG', $isExampleConfig);
 }
@@ -119,6 +124,7 @@ function findScript(string $id): ?array // @phpstan-ignore missingType.iterableV
 }
 
 require __DIR__ . '/frontend.php';
+require __DIR__ . '/aws.php';
 
 /* ============================================================
  * Project path helpers (Phase 2 - WSL Path Selector)
@@ -227,6 +233,20 @@ if ($uri === '/api/scripts' && $method === 'GET') {
     jsonResponse(getTimings());
 } elseif ($uri === '/api/projects' && $method === 'GET') {
     handleApiProjects();
+} elseif ($uri === '/api/aws/run' && $method === 'POST') {
+    handleAwsDashboardRequest($method);
+} elseif ($uri === '/api/tunnel-status' && $method === 'GET') {
+    handleApiTunnelStatus();
+} elseif ($uri === '/api/tunnel-start' && $method === 'POST') {
+    handleApiTunnelStart();
+} elseif ($uri === '/api/tunnel-stop' && $method === 'POST') {
+    handleApiTunnelStop();
+} elseif ($uri === '/api/tunnel-configure' && $method === 'POST') {
+    handleApiTunnelConfigure();
+} elseif ($uri === '/api/tunnel-logs' && $method === 'GET') {
+    handleApiTunnelLogs();
+} elseif ($uri === '/api/tunnel-test' && ($method === 'GET' || $method === 'POST')) {
+    handleApiTunnelTest();
 } elseif ($uri === '/api/run' && $method === 'POST') {
     handleApiRun();
 } elseif ($uri === '/api/status' && $method === 'GET') {
@@ -245,6 +265,8 @@ if ($uri === '/api/scripts' && $method === 'GET') {
     } else {
         http_response_code(404);
     }
+} elseif (($uri === '/aws' || $uri === '/aws.php') && ($method === 'GET' || $method === 'POST')) {
+    handleAwsDashboardRequest($method);
 } elseif ($uri === '/' || $uri === '') {
     serveDashboardHtml();
 } else {
@@ -262,7 +284,7 @@ function jsonResponse(array $data, int $status = 200): void // @phpstan-ignore m
 {
     http_response_code($status);
     header('Content-Type: application/json');
-    echo json_encode($data, JSON_UNESCAPED_SLASHES);
+    echo json_encode($data, JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
 }
 
 /**
@@ -290,6 +312,425 @@ function getJsonBody(): array
     }
     /** @var array<string, string> */
     return $decoded;
+}
+
+/**
+ * @return array<string, mixed>|null
+ */
+function readTunnelState(): ?array
+{
+    if (!file_exists(TUNNEL_STATE_FILE)) {
+        return null;
+    }
+
+    $raw = file_get_contents(TUNNEL_STATE_FILE);
+    $decoded = $raw !== false ? json_decode($raw, true) : null;
+    if (!is_array($decoded)) {
+        return null;
+    }
+
+    $url = isset($decoded['url']) && is_string($decoded['url']) ? trim($decoded['url']) : '';
+    if ($url === '') {
+        return null;
+    }
+
+    $provider = isset($decoded['provider']) && is_string($decoded['provider']) ? $decoded['provider'] : 'manual';
+    $pid = isset($decoded['pid']) ? (int) $decoded['pid'] : 0;
+    if ($provider !== 'manual' && $pid > 0 && !processExists($pid)) {
+        @unlink(TUNNEL_STATE_FILE);
+        return null;
+    }
+
+    return [
+        'active' => true,
+        'url' => $url,
+        'provider' => $provider,
+        'pid' => $pid > 0 ? $pid : null,
+        'target' => isset($decoded['target']) && is_string($decoded['target']) ? $decoded['target'] : null,
+        'started_at' => isset($decoded['started_at']) && is_string($decoded['started_at']) ? $decoded['started_at'] : null,
+        'configured_at' => isset($decoded['configured_at']) && is_string($decoded['configured_at']) ? $decoded['configured_at'] : null,
+        'note' => isset($decoded['note']) && is_string($decoded['note']) ? $decoded['note'] : null,
+    ];
+}
+
+function getDefaultTunnelTarget(): string
+{
+    $port = (string) ($_SERVER['SERVER_PORT'] ?? getenv('DASHBOARD_PORT') ?: '8899');
+    if (!ctype_digit($port)) {
+        $port = '8899';
+    }
+
+    return 'http://127.0.0.1:' . $port;
+}
+
+function getTunnelLogFile(): string
+{
+    return TMP_DIR . '/tunnel-cloudflare.log';
+}
+
+function getTunnelPidFile(): string
+{
+    return TMP_DIR . '/tunnel-cloudflare.pid';
+}
+
+function findCloudflaredBinary(): ?string
+{
+    $candidates = [];
+    $envBin = getenv('CLOUDFLARED_BIN');
+    if (is_string($envBin) && $envBin !== '') {
+        $candidates[] = $envBin;
+    }
+
+    $home = getenv('HOME');
+    if (is_string($home) && $home !== '') {
+        $candidates[] = $home . '/.local/bin/cloudflared';
+    }
+
+    $candidates[] = '/usr/local/bin/cloudflared';
+    $candidates[] = '/usr/bin/cloudflared';
+
+    foreach ($candidates as $candidate) {
+        if (is_string($candidate) && $candidate !== '' && is_file($candidate) && is_executable($candidate)) {
+            return $candidate;
+        }
+    }
+
+    $resolved = trim((string) shell_exec('command -v cloudflared 2>/dev/null'));
+    return $resolved !== '' ? $resolved : null;
+}
+
+function parseCloudflareTunnelUrl(string $log): ?string
+{
+    if (preg_match_all('#https://([a-z0-9-]+)\.trycloudflare\.com#i', $log, $matches, PREG_SET_ORDER) === false) {
+        return null;
+    }
+
+    foreach (array_reverse($matches) as $match) {
+        $subdomain = strtolower((string) ($match[1] ?? ''));
+        if ($subdomain !== '' && $subdomain !== 'api') {
+            return (string) $match[0];
+        }
+    }
+
+    return null;
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function tunnelStatusPayload(?array $state): array
+{
+    if ($state === null) {
+        return [
+            'active' => false,
+            'provider_default' => 'cloudflare',
+            'cloudflare_available' => findCloudflaredBinary() !== null,
+            'default_target' => getDefaultTunnelTarget(),
+        ];
+    }
+
+    return $state + [
+        'provider_default' => 'cloudflare',
+        'cloudflare_available' => findCloudflaredBinary() !== null,
+        'default_target' => getDefaultTunnelTarget(),
+    ];
+}
+
+function handleApiTunnelStatus(): void
+{
+    $state = readTunnelState();
+    jsonResponse(tunnelStatusPayload($state));
+}
+
+function handleApiTunnelLogs(): void
+{
+    $logFile = getTunnelLogFile();
+    if (!file_exists($logFile)) {
+        jsonResponse(['logs' => '', 'exists' => false]);
+        return;
+    }
+    $content = (string) file_get_contents($logFile);
+    if (strlen($content) > 4096) {
+        $content = substr($content, -4096);
+    }
+    jsonResponse(['logs' => $content, 'exists' => true]);
+}
+
+function handleApiTunnelStart(): void
+{
+    $existing = readTunnelState();
+    if ($existing !== null && ($existing['provider'] ?? '') === 'cloudflare' && isset($existing['url'])) {
+        jsonResponse(tunnelStatusPayload($existing));
+        return;
+    }
+
+    $cloudflared = findCloudflaredBinary();
+    if ($cloudflared === null) {
+        jsonResponse(['error' => 'cloudflared is not installed or not on PATH'], 500);
+        return;
+    }
+
+    $body = getJsonBody();
+    $target = trim((string) ($body['target'] ?? getDefaultTunnelTarget()));
+    if (filter_var($target, FILTER_VALIDATE_URL) === false) {
+        jsonResponse(['error' => 'Tunnel target must be a valid absolute URL'], 400);
+        return;
+    }
+
+    handleApiTunnelStop(true);
+
+    $logFile = getTunnelLogFile();
+    $pidFile = getTunnelPidFile();
+    @unlink($logFile);
+    @unlink($pidFile);
+
+    $inner = 'echo $$ > ' . escapeshellarg($pidFile)
+        . '; exec ' . escapeshellarg($cloudflared)
+        . ' tunnel --no-autoupdate --url ' . escapeshellarg($target)
+        . ' > ' . escapeshellarg($logFile) . ' 2>&1';
+    $command = 'setsid bash -lc ' . escapeshellarg($inner) . ' > /dev/null 2>&1 &';
+    exec($command);
+
+    $pid = 0;
+    for ($attempt = 0; $attempt < 50; $attempt++) {
+        usleep(100000);
+        if (file_exists($pidFile)) {
+            $pid = (int) trim((string) file_get_contents($pidFile));
+            if ($pid > 0) {
+                break;
+            }
+        }
+    }
+
+    $url = null;
+    $lastLog = '';
+    for ($attempt = 0; $attempt < 150; $attempt++) {
+        usleep(100000);
+        $lastLog = file_exists($logFile) ? (string) file_get_contents($logFile) : '';
+        $url = $lastLog !== '' ? parseCloudflareTunnelUrl($lastLog) : null;
+        if ($url !== null) {
+            break;
+        }
+        if ($pid > 0 && !processExists($pid)) {
+            break;
+        }
+    }
+
+    if ($url === null) {
+        if ($pid > 0) {
+            killProcess(-$pid, 15);
+            killProcess($pid, 15);
+        }
+
+        $message = 'Cloudflare tunnel did not start cleanly';
+        if ($lastLog !== '') {
+            $tail = trim(substr($lastLog, -400));
+            if ($tail !== '') {
+                $message .= ': ' . preg_replace('/\s+/', ' ', $tail);
+            }
+        }
+
+        jsonResponse(['error' => $message], 502);
+        return;
+    }
+
+    $state = [
+        'url' => rtrim($url, '/'),
+        'provider' => 'cloudflare',
+        'pid' => $pid > 0 ? $pid : null,
+        'target' => $target,
+        'started_at' => gmdate('Y-m-d H:i:s') . ' UTC',
+        'configured_at' => gmdate('Y-m-d H:i:s') . ' UTC',
+        'note' => 'Cloudflare quick tunnel',
+    ];
+
+    file_put_contents(TUNNEL_STATE_FILE, json_encode($state, JSON_UNESCAPED_SLASHES));
+    jsonResponse(tunnelStatusPayload($state));
+}
+
+function handleApiTunnelStop(bool $silent = false): void
+{
+    $state = readTunnelState();
+    $pid = is_array($state) && isset($state['pid']) ? (int) $state['pid'] : 0;
+
+    if ($pid > 0 && processExists($pid)) {
+        killProcess(-$pid, 15);
+        killProcess($pid, 15);
+
+        for ($attempt = 0; $attempt < 20; $attempt++) {
+            usleep(100000);
+            if (!processExists($pid)) {
+                break;
+            }
+        }
+
+        if (processExists($pid)) {
+            killProcess(-$pid, 9);
+            killProcess($pid, 9);
+        }
+    }
+
+    @unlink(TUNNEL_STATE_FILE);
+    @unlink(getTunnelPidFile());
+    @unlink(getTunnelLogFile());
+
+    if ($silent) {
+        return;
+    }
+
+    jsonResponse(tunnelStatusPayload(null));
+}
+
+function handleApiTunnelConfigure(): void
+{
+    $body = getJsonBody();
+    $clear = filter_var($body['clear'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    $url = trim((string) ($body['url'] ?? ''));
+
+    if ($clear || $url === '') {
+        handleApiTunnelStop();
+        return;
+    }
+
+    if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+        jsonResponse(['error' => 'Tunnel URL must be a valid absolute URL'], 400);
+        return;
+    }
+
+    $parts = parse_url($url);
+    $scheme = is_array($parts) ? strtolower((string) ($parts['scheme'] ?? '')) : '';
+    if (!in_array($scheme, ['http', 'https'], true)) {
+        jsonResponse(['error' => 'Tunnel URL must start with http:// or https://'], 400);
+        return;
+    }
+
+    $normalizedUrl = rtrim($url, '/');
+    handleApiTunnelStop(true);
+    $state = [
+        'url' => $normalizedUrl,
+        'provider' => 'manual',
+        'target' => isset($body['target']) && is_string($body['target']) && trim($body['target']) !== ''
+            ? trim($body['target'])
+            : null,
+        'started_at' => gmdate('Y-m-d H:i:s') . ' UTC',
+        'configured_at' => gmdate('Y-m-d H:i:s') . ' UTC',
+        'note' => isset($body['note']) && is_string($body['note']) && trim($body['note']) !== ''
+            ? trim($body['note'])
+            : null,
+    ];
+
+    file_put_contents(TUNNEL_STATE_FILE, json_encode($state, JSON_UNESCAPED_SLASHES));
+    jsonResponse(tunnelStatusPayload([
+        'active' => true,
+        'url' => $state['url'],
+        'provider' => $state['provider'],
+        'target' => $state['target'],
+        'started_at' => $state['started_at'],
+        'configured_at' => $state['configured_at'],
+        'note' => $state['note'],
+    ]));
+}
+
+function handleApiTunnelTest(): void
+{
+    $state = readTunnelState();
+    if ($state === null) {
+        jsonResponse(['reachable' => false, 'error' => 'No tunnel configured'], 400);
+        return;
+    }
+
+    $baseUrl = (string) ($state['url'] ?? '');
+    if ($baseUrl === '') {
+        jsonResponse(['reachable' => false, 'error' => 'No tunnel URL'], 400);
+        return;
+    }
+
+    $body = getJsonBody();
+    $requestMethod = strtoupper((string) ($body['method'] ?? $_GET['method'] ?? 'GET'));
+    if (!in_array($requestMethod, ['GET', 'HEAD'], true)) {
+        jsonResponse(['reachable' => false, 'error' => 'Unsupported request method'], 400);
+        return;
+    }
+
+    $path = trim((string) ($body['path'] ?? $_GET['path'] ?? '/'));
+    if ($path === '') {
+        $path = '/';
+    }
+    if (preg_match('#^[a-z][a-z0-9+.-]*://#i', $path) === 1) {
+        jsonResponse(['reachable' => false, 'error' => 'Path must be relative'], 400);
+        return;
+    }
+    if (str_contains($path, "\r") || str_contains($path, "\n")) {
+        jsonResponse(['reachable' => false, 'error' => 'Invalid path'], 400);
+        return;
+    }
+    if (!str_starts_with($path, '/')) {
+        $path = '/' . $path;
+    }
+
+    if (!function_exists('curl_init')) {
+        jsonResponse(['reachable' => false, 'error' => 'cURL extension is not available'], 500);
+        return;
+    }
+
+    $testUrl = rtrim($baseUrl, '/') . ($path === '/' ? '/' : $path);
+    $ch = curl_init($testUrl);
+    if ($ch === false) {
+        jsonResponse(['reachable' => false, 'error' => 'Failed to initialize cURL'], 500);
+        return;
+    }
+
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CUSTOMREQUEST => $requestMethod,
+        CURLOPT_NOBODY => $requestMethod === 'HEAD',
+        CURLOPT_TIMEOUT => 12,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_MAXREDIRS => 3,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => 0,
+        CURLOPT_HTTPHEADER => ['Accept: */*'],
+    ]);
+
+    $startTime = hrtime(true);
+    $response = curl_exec($ch);
+    $elapsedMs = (int) round((hrtime(true) - $startTime) / 1_000_000);
+
+    $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $finalUrl = (string) curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+    $contentType = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+    $error = curl_error($ch);
+    curl_close($ch);
+
+    if ($status <= 0) {
+        jsonResponse([
+            'reachable' => false,
+            'url' => $testUrl,
+            'method' => $requestMethod,
+            'path' => $path,
+            'error' => $error !== '' ? $error : 'No response',
+        ]);
+        return;
+    }
+
+    $bodyPreview = null;
+    if ($requestMethod !== 'HEAD' && is_string($response) && $response !== '') {
+        $cleanBody = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $response);
+        $bodyPreview = substr((string) $cleanBody, 0, 1200);
+    }
+
+    jsonResponse([
+        'reachable' => true,
+        'url' => $testUrl,
+        'final_url' => $finalUrl !== '' ? $finalUrl : $testUrl,
+        'method' => $requestMethod,
+        'path' => $path,
+        'status' => $status,
+        'time_ms' => $elapsedMs,
+        'content_type' => $contentType !== '' ? $contentType : null,
+        'body_preview' => $bodyPreview,
+    ]);
 }
 
 
