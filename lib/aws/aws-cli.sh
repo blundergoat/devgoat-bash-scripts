@@ -102,6 +102,7 @@ if [[ "$COMMAND" == "terraform" ]]; then
     require_cmd terraform "Install Terraform: https://developer.hashicorp.com/terraform/install"
 
     if terraform_requires_aws_auth "${REST[@]}"; then
+        ensure_aws_cli
         require_aws_auth
     fi
 

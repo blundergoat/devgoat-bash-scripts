@@ -199,10 +199,12 @@ echo ""
 echo -e "${BOLD}${CYAN}  SECURITY GROUPS (open ingress)${NC}"
 echo -e "${DIM}  ─────────────────────────────────────────────────────────────${NC}"
 
-open_sgs=$(aws ec2 describe-security-groups \
-    --filters "Name=ip-permission.cidr,Values=0.0.0.0/0" \
+# Fetch all security groups and filter for 0.0.0.0/0 or ::/0 ingress in jq
+# (AWS-side filter only supports IPv4 CIDR, so we filter both families client-side)
+raw_sgs=$(aws ec2 describe-security-groups \
     --query 'SecurityGroups[*].{id:GroupId,name:GroupName,desc:Description,perms:IpPermissions}' \
     --output json 2>/dev/null || echo '[]')
+open_sgs=$(echo "$raw_sgs" | jq '[.[] | select(.perms[]? | (.IpRanges[]?.CidrIp == "0.0.0.0/0") or (.Ipv6Ranges[]?.CidrIpv6 == "::/0"))]')
 open_sg_count=$(echo "$open_sgs" | jq 'length')
 
 if [[ "$open_sg_count" -eq 0 ]]; then
@@ -242,8 +244,8 @@ else
             else
                 port_label="$from_port-$to_port"; level="warn"
             fi
-            verdict "$level" "Port $port_label open to 0.0.0.0/0"
-            add_finding "$level" "$sg_name ($sg_id)" "SG" "Port $port_label open to 0.0.0.0/0"
+            verdict "$level" "Port $port_label open to the internet"
+            add_finding "$level" "$sg_name ($sg_id)" "SG" "Port $port_label open to the internet"
         done
         echo ""
     done
@@ -286,7 +288,10 @@ else
         else
             first=true
             echo "$key_info" | jq -r '.AccessKeyMetadata[] | select(.Status == "Active") | "\(.AccessKeyId)|\(.CreateDate)"' | while IFS='|' read -r key_id created; do
-                created_epoch=$(date -d "$created" +%s 2>/dev/null || echo "0")
+                # GNU date (Linux) then BSD date (macOS) fallback
+                created_epoch=$(date -d "$created" +%s 2>/dev/null \
+                    || date -j -f "%Y-%m-%dT%H:%M:%S%z" "${created/Z/+0000}" +%s 2>/dev/null \
+                    || echo "0")
                 now_epoch=$(date +%s)
                 if [[ "$created_epoch" -gt 0 ]]; then
                     age_days=$(( (now_epoch - created_epoch) / 86400 ))

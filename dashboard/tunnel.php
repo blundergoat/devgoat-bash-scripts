@@ -1008,7 +1008,7 @@ function updateUptimeDisplay() {
         if (el) el.textContent = '';
         return;
     }
-    const started = new Date(state.tunnel.started_at.replace(' UTC', 'Z'));
+    const started = new Date(state.tunnel.started_at);
     const elapsed = Math.floor((Date.now() - started.getTime()) / 1000);
     if (elapsed < 0) { el.textContent = ''; return; }
     const h = Math.floor(elapsed / 3600);

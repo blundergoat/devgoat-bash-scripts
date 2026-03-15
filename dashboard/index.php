@@ -539,8 +539,8 @@ function handleApiTunnelStart(): void
         'provider' => 'cloudflare',
         'pid' => $pid > 0 ? $pid : null,
         'target' => $target,
-        'started_at' => gmdate('Y-m-d H:i:s') . ' UTC',
-        'configured_at' => gmdate('Y-m-d H:i:s') . ' UTC',
+        'started_at' => gmdate('Y-m-d\TH:i:s\Z'),
+        'configured_at' => gmdate('Y-m-d\TH:i:s\Z'),
         'note' => 'Cloudflare quick tunnel',
     ];
 
@@ -612,8 +612,8 @@ function handleApiTunnelConfigure(): void
         'target' => isset($body['target']) && is_string($body['target']) && trim($body['target']) !== ''
             ? trim($body['target'])
             : null,
-        'started_at' => gmdate('Y-m-d H:i:s') . ' UTC',
-        'configured_at' => gmdate('Y-m-d H:i:s') . ' UTC',
+        'started_at' => gmdate('Y-m-d\TH:i:s\Z'),
+        'configured_at' => gmdate('Y-m-d\TH:i:s\Z'),
         'note' => isset($body['note']) && is_string($body['note']) && trim($body['note']) !== ''
             ? trim($body['note'])
             : null,
