@@ -6,6 +6,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [v1.5.0] - 2026-03-21
+
+### Added
+
+- **GOAT Flow** — adopted GOAT Flow system spec across CLAUDE.md and AGENTS.md.
+  - SCOPE step added to execution loop (READ → CLASSIFY → SCOPE → ACT → VERIFY → LOG).
+  - CLASSIFY now includes complexity budgets: Hotfix (2/3), Standard (4/10), System (6/20), Infra (8/25).
+  - ACT requires explicit mode-transition declarations.
+  - LOG upgraded from SHOULD to MUST with mechanical trigger and human-correction rule.
+  - Ask First expanded to explicit 5-item micro-checklist in both files.
+  - Debug mode: "No fixes until human reviews diagnosis."
+- **Consolidated agent-evals/** — merged `codex-evals/` into `agent-evals/` with `Agents:` label (all/codex) on every eval. 3 Codex-specific evals added, 0 duplicates.
+- **Write/Edit enforcement** — `deny-dangerous.sh` now inspects Write/Edit tool calls for .env, lockfile, and generated code modifications (previously Bash only).
+- **Read deny patterns** — `settings.json` blocks `Read(.env*)`, `Read(**/secrets/**)`, `Read(**/*.pem)`, `Read(**/*.key)`.
+- **Agent ignore files** — `.copilotignore` and `.cursorignore` with secret patterns.
+- **docs/lessons.md seeded** — first entry from rename-grep-verification incident (commit c72338a).
+
+### Changed
+
+- **AGENTS.md** — RECORD renamed to LOG, Sub-Agent Objectives and Communication When Blocked sections added.
+- **Skills renamed** — `preflight/` → `goat-preflight/`, `code-review/` → `goat-review/`, `debug-investigate/` → `goat-debug/`, `audit/` → `goat-audit/`, `research/` → `goat-research/`.
+- **Codex playbooks renamed** — `preflight.md` → `goat-preflight.md`, etc.
+- **CI workflow** — added AGENTS.md line count validation, router table reference checks, removed `codex-evals/` trigger.
+- **scripts/context-validate.sh** — updated to validate consolidated `agent-evals/` with `Agents:` heading check.
+- **scripts/deny-dangerous.sh** — Codex deny policy updated for Write/Edit tool awareness.
+- **.gitignore** — organised into logical sections; added `.claude/projects/`, `.claude/worktrees/`.
+
+### Removed
+
+- **codex-evals/** — consolidated into `agent-evals/`.
+- **Old skill directories** — replaced by `goat-*` prefix names.
+- **Old Codex playbook names** — replaced by `goat-*` prefix names.
+
+---
+
 ## [v1.4.0] - 2026-03-15
 
 ### Added

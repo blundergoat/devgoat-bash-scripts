@@ -1,0 +1,64 @@
+{
+  "policy": {
+    "deny": [
+      "Bash(*git commit*)",
+      "Bash(*git push*)",
+      "Read(.env*)",
+      "Read(**/secrets/**)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)"
+    ]
+  },
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "run_shell_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.gemini/hooks/deny-dangerous.sh\"",
+            "name": "Deny Dangerous"
+          }
+        ]
+      },
+      {
+        "matcher": "write_file|replace",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.gemini/hooks/deny-dangerous.sh\"",
+            "name": "Deny Dangerous"
+          },
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.gemini/hooks/guard-truncation.sh\"",
+            "name": "Guard Truncation"
+          }
+        ]
+      }
+    ],
+    "AfterTool": [
+      {
+        "matcher": "write_file|replace",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.gemini/hooks/format-file.sh\"",
+            "name": "Format File"
+          }
+        ]
+      }
+    ],
+    "AfterAgent": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.gemini/hooks/stop-lint.sh\"",
+            "name": "Stop Lint"
+          }
+        ]
+      }
+    ]
+  }
+}

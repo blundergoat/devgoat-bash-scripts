@@ -5,7 +5,9 @@ on:
     paths:
       - 'AGENTS.md'
       - 'CLAUDE.md'
+      - 'GEMINI.md'
       - '.claude/**'
+      - '.gemini/**'
       - '.github/instructions/**'
       - '.github/workflows/context-validation.yml'
       - 'docs/**'
@@ -30,10 +32,38 @@ jobs:
             echo "::warning::AGENTS.md exceeds 135 line target for Codex collections (${agents_lines} lines)"
           fi
 
+      - name: Validate Gemini runtime size
+        run: |
+          gemini_lines=$(wc -l < GEMINI.md)
+          echo "GEMINI.md: ${gemini_lines} lines"
+          if [ "${gemini_lines}" -gt 150 ]; then
+            echo "::error::GEMINI.md exceeds 150 line hard ceiling (${gemini_lines} lines)"
+            exit 1
+          elif [ "${gemini_lines}" -gt 120 ]; then
+            echo "::warning::GEMINI.md exceeds 120 line target for collections (${gemini_lines} lines)"
+          fi
+
       - name: Validate Codex workflow assets
         run: |
           chmod +x scripts/*.sh
           ./scripts/context-validate.sh
+
+      - name: Validate Gemini workflow assets
+        run: |
+          errors=0
+          while IFS= read -r -d '' skill_dir; do
+            if [ ! -f "${skill_dir}/SKILL.md" ]; then
+              echo "::error::Missing SKILL.md in ${skill_dir}"
+              errors=$((errors + 1))
+            fi
+          done < <(find .gemini/skills -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
+
+          if [ ! -f ".gemini/settings.json" ]; then
+            echo "::error::Missing .gemini/settings.json"
+            errors=$((errors + 1))
+          fi
+
+          exit "${errors}"
 
       - name: Validate Claude workflow assets
         run: |
@@ -70,7 +100,12 @@ jobs:
           done
           for d in .claude/skills/goat-preflight .claude/skills/goat-review \
                    .claude/skills/goat-debug .claude/skills/goat-audit \
-                   .claude/skills/goat-research; do
+                   .claude/skills/goat-investigate .claude/skills/goat-plan \
+                   .claude/skills/goat-test \
+                   .gemini/skills/goat-preflight .gemini/skills/goat-review \
+                   .gemini/skills/goat-debug .gemini/skills/goat-audit \
+                   .gemini/skills/goat-research .gemini/skills/goat-plan \
+                   .gemini/skills/goat-test; do
             if [ ! -d "$d" ]; then
               echo "::error::Router table references $d/ which does not exist"
               errors=$((errors + 1))
@@ -78,7 +113,7 @@ jobs:
           done
           exit "${errors}"
 
-      - name: Local CLAUDE files stay short
+      - name: Local context files stay short
         run: |
           errors=0
           while IFS= read -r -d '' file; do
@@ -87,6 +122,6 @@ jobs:
               echo "::error::${file} exceeds 20 lines (${lines} lines)"
               errors=$((errors + 1))
             fi
-          done < <(find . -name 'CLAUDE.md' -not -path './CLAUDE.md' -not -path './.git/*' -print0 | sort -z)
+          done < <(find . \( -name 'CLAUDE.md' -o -name 'GEMINI.md' -o -name 'AGENTS.md' \) -not -path './CLAUDE.md' -not -path './GEMINI.md' -not -path './AGENTS.md' -not -path './.git/*' -print0 | sort -z)
 
           exit "${errors}"

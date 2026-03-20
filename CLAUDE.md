@@ -1,4 +1,4 @@
-# CLAUDE.md — v2.1 (2026-03-20)
+# CLAUDE.md — v2.2 (2026-03-21)
 
 Shell script library. Drop-in or template scripts under `lib/`. Bats test suite under `tests/`.
 
@@ -18,9 +18,8 @@ bats tests/ --recursive              # Run test suite
 ❌ "The _common.sh uses parent traversal" (guessed)
 ✅ Read lib/stacks/_common.sh → confirmed: source "../_common.sh"
 ```
-**CLASSIFY** — MUST declare complexity and mode before acting.
-Complexity: Hotfix (2 reads / 3 turns) | Standard (4 / 10) | System Change (6 / 20) | Infra (8 / 25). Over budget = re-classify.
-Mode: Plan / Implement / Explain / Debug / Review. Question = answer; directive = act. MUST NOT infer implementation from a question.
+**CLASSIFY** — MUST declare 3 signals before acting:
+(1) Intent: question = answer; directive = act. MUST NOT infer implementation. (2) Complexity: Hotfix (2/3) | Standard (4/10) | System (6/20) | Infra (8/25). Over budget = re-classify. (3) Mode: Plan / Implement / Explain / Debug / Review.
 
 **SCOPE** — MUST declare before acting: files to change, non-goals, max blast radius. Expanding = stop and re-scope.
 
@@ -43,6 +42,7 @@ No actions outside declared state without: "Switching to [NEW STATE] because [re
 - Level 1 (isolated failure): note, continue
 - Level 2 (cross-domain/security): MUST full stop, diagnosis with file:line, wait for human
 - Two corrections on same approach = MUST rewind
+Recovery: missing context → read the file first. Out-of-scope → name boundary and redirect. Conflicting instructions → flag and ask.
 
 **LOG** — MUST update when tripped (DoD gate #4). SHOULD load `docs/footguns.md` at Ask First boundaries.
 
@@ -51,6 +51,7 @@ No actions outside declared state without: "Switching to [NEW STATE] because [re
 | `docs/lessons.md` | Behavioural mistake (agent did wrong) |
 | `docs/footguns.md` | Cross-domain landmine (file:line evidence) |
 | `docs/confusion-log.md` | Structural confusion (hard to navigate) |
+| `docs/decisions/` | Significant technical decision (context + rationale) |
 
 Mechanical trigger: if VERIFY caught a failure in your code, or you corrected course, lessons.md entry required before DoD satisfied. After human correction, MUST log immediately.
 Dual-agent: read learning loop files before appending to avoid duplicating entries from Codex.
@@ -95,24 +96,25 @@ When blocked: ask exactly one question with a recommended default.
 
 SHOULD use `tasks/todo.md` for 5+ turn tasks. SHOULD write `tasks/handoff.md` before ending incomplete work. Context escalation: `/compact` after 15+ turns → split if two compactions → `/clear` between unrelated tasks.
 
+When sources conflict: (1) user's explicit instruction > (2) CLAUDE.md > (3) setup templates > (4) system spec > (5) skills/playbooks.
+
 ## Router Table
 
 | Resource | Path |
 |----------|------|
-| Domain reference | `docs/domain-reference.md` |
-| Architecture | `docs/architecture.md` |
-| Code map | `docs/code-map.md` |
-| Bats guide | `docs/bats-core.md` |
+| Docs | `docs/domain-reference.md`, `architecture.md`, `code-map.md`, `bats-core.md` |
 | Footguns | `docs/footguns.md` |
 | Lessons | `docs/lessons.md` |
 | Confusion log | `docs/confusion-log.md` |
-| Shell conventions | `.github/instructions/shell-conventions.instructions.md` |
-| Domain instructions | `.github/instructions/{ai-cli,aws,stacks,dev}.instructions.md` |
+| Decisions | `docs/decisions/` |
+| Instructions | `.github/instructions/{shell-conventions,ai-cli,aws,stacks,dev}.instructions.md` |
 | Preflight skill | `.claude/skills/goat-preflight/` |
-| Review skill | `.claude/skills/goat-review/` |
+| Investigate skill | `.claude/skills/goat-investigate/` |
 | Debug skill | `.claude/skills/goat-debug/` |
 | Audit skill | `.claude/skills/goat-audit/` |
-| Research skill | `.claude/skills/goat-research/` |
+| Review skill | `.claude/skills/goat-review/` |
+| Plan skill | `.claude/skills/goat-plan/` |
+| Test skill | `.claude/skills/goat-test/` |
 | Agent evals | `agent-evals/` |
 | Handoff template | `tasks/handoff-template.md` |
 | Codex runtime | `AGENTS.md` |

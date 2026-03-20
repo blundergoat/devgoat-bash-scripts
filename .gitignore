@@ -43,3 +43,8 @@ __pycache__/
 
 # Project-specific
 dashboard/config.php
+
+# Gemini CLI and tasks
+.gemini/settings.local.json
+tasks/todo.md
+tasks/handoff.md

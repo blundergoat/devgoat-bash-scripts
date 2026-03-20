@@ -4,9 +4,3 @@
 **/*.key
 **/credentials*
 **/.git/
-.env*
-**/secrets/
-**/*.pem
-**/*.key
-**/credentials*
-**/.git/

@@ -1,4 +1,4 @@
-# /goat-research - Deep Read for Shell Script Collections
+# /goat-investigate - Deep Read for Shell Script Collections
 
 Use this when the human wants understanding before planning or implementation.
 

@@ -31,6 +31,7 @@ Applicable to `aws/`, `docker/`, `health/`, `workflow/`, `maintenance/`, `tools/
 - `lib/ai-cli/` sources `_common.sh` from the same directory.
 - `lib/stacks/` sources `../_common.sh` from subdirectories.
 - `lib/aws/` sources `_aws-common.sh` from the same directory.
+- Only `ai-cli/_common.sh` sanitizes WSL PATH. Other domains use bare `command -v`.
 - Logging is domain-scoped:
   - `ai-cli`: direct coloured output
   - `stacks`: `step`/`pass`/`fail` helpers
