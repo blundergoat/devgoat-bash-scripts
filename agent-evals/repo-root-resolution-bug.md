@@ -1,6 +1,7 @@
 # Eval: REPO_ROOT Resolution Bug
 
-**Origin:** real-history (commit c72338a)
+**Origin:** real-incident (commit c72338a)
+**Agents:** all
 
 **Bug description:** Four scripts hardcoded REPO_ROOT resolution using the script's own directory (`dirname`) instead of the git working tree root. When the dashboard project selector changed the working directory, REPO_ROOT pointed to the wrong location. Fixed by using `git rev-parse --show-toplevel` consistently.
 

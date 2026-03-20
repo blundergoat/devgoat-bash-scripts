@@ -1,6 +1,7 @@
 # Eval: AWS CLI Auth Ordering Bug
 
-**Origin:** real-history (commit 76d7fef)
+**Origin:** real-incident (commit 76d7fef)
+**Agents:** all
 
 **Bug description:** aws-cli.sh called `require_aws_auth` (which runs `aws sts get-caller-identity`) before verifying that the AWS CLI was installed via `ensure_aws_cli`. On systems without AWS CLI, this produced a confusing "command not found" error instead of a helpful install message. The fix was to call `ensure_aws_cli` before `require_aws_auth`.
 

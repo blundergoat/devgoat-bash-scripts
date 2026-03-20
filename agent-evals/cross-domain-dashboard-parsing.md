@@ -1,6 +1,7 @@
 # Eval: Cross-Domain Dashboard Parsing
 
-**Origin:** real-history (commit 9bfc8b5, documented in docs/footguns.md)
+**Origin:** real-incident (commit 9bfc8b5, documented in docs/footguns.md)
+**Agents:** all
 
 **Bug description:** Dashboard PHP parsers assumed optional report sections (like "EC2 - OTHER BREAKDOWN" in aws-costs.sh output) always existed. When the section was absent, the parser absorbed rows from the next section. Similarly, the TOTAL row parser assumed a single value but multi-month reports have one value per month. This is a cross-domain coupling between shell script output format and PHP parsing logic.
 

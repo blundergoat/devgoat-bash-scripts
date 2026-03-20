@@ -30,11 +30,13 @@ show_help() {
 Usage: ./scripts/context-validate.sh
 
 Validate the Codex workflow assets:
+  - AGENTS.md line count and required sections
   - AGENTS.md router targets
   - playbook required sections
   - lessons/footguns/ownership docs
+  - executable verification scripts
   - tasks runtime files
-  - Codex eval presence
+  - Codex eval uniqueness
 
 Exit codes:
   0  All checks passed
@@ -55,6 +57,7 @@ is_optional_runtime_path() {
     local path="$1"
 
     case "$path" in
+        docs/confusion-log.md|\
         tasks/todo.md|tasks/handoff.md)
             return 0
             ;;
@@ -62,6 +65,29 @@ is_optional_runtime_path() {
             return 1
             ;;
     esac
+}
+
+check_agents() {
+    local agents_file="$REPO_ROOT/AGENTS.md"
+    local line_count
+
+    line_count=$(wc -l < "$agents_file")
+    log "AGENTS.md: ${line_count} lines"
+
+    if (( line_count > 150 )); then
+        fail "AGENTS.md exceeds 150 line hard ceiling ($line_count)"
+    elif (( line_count > 135 )); then
+        warn "AGENTS.md exceeds 135 line target ($line_count)"
+    fi
+
+    check_required_heading "$agents_file" "## Essential Commands"
+    check_required_heading "$agents_file" "## Execution Loop: READ → CLASSIFY → SCOPE → ACT → VERIFY → LOG"
+    check_required_heading "$agents_file" "## Autonomy Tiers"
+    check_required_heading "$agents_file" "## Definition of Done"
+    check_required_heading "$agents_file" "## Working Memory"
+    check_required_heading "$agents_file" "## Sub-Agent Objectives"
+    check_required_heading "$agents_file" "## Communication When Blocked"
+    check_required_heading "$agents_file" "## Router"
 }
 
 check_router_targets() {
@@ -114,29 +140,30 @@ check_playbooks() {
         fail "Expected 5 playbooks in docs/codex-playbooks, found $count"
     fi
 
-    check_required_heading "$dir/preflight.md" "## MUST"
-    check_required_heading "$dir/preflight.md" "## SHOULD"
-    check_required_heading "$dir/preflight.md" "## MAY"
-    check_required_heading "$dir/preflight.md" "## Output"
+    check_required_heading "$dir/goat-preflight.md" "## MUST"
+    check_required_heading "$dir/goat-preflight.md" "## SHOULD"
+    check_required_heading "$dir/goat-preflight.md" "## MAY"
+    check_required_heading "$dir/goat-preflight.md" "## Output"
 
-    check_required_heading "$dir/research.md" "## Hard Gate"
-    check_required_heading "$dir/research.md" "### Files Involved"
-    check_required_heading "$dir/research.md" "### Request Flow"
-    check_required_heading "$dir/research.md" "### Boundaries Touched"
-    check_required_heading "$dir/research.md" "### Risks / Gotchas"
+    check_required_heading "$dir/goat-research.md" "## Hard Gate"
+    check_required_heading "$dir/goat-research.md" "### Files Involved"
+    check_required_heading "$dir/goat-research.md" "### Request Flow"
+    check_required_heading "$dir/goat-research.md" "### Boundaries Touched"
+    check_required_heading "$dir/goat-research.md" "### Risks / Gotchas"
 
-    check_required_heading "$dir/debug-investigate.md" "## Hard Gate"
-    check_required_heading "$dir/debug-investigate.md" "## Workflow"
-    check_required_heading "$dir/debug-investigate.md" "## Diagnosis Template"
+    check_required_heading "$dir/goat-debug.md" "## Hard Gate"
+    check_required_heading "$dir/goat-debug.md" "## Workflow"
+    check_required_heading "$dir/goat-debug.md" "## Diagnosis Template"
 
-    check_required_heading "$dir/audit.md" "### Discovery"
-    check_required_heading "$dir/audit.md" "### Verification"
-    check_required_heading "$dir/audit.md" "### Prioritisation"
-    check_required_heading "$dir/audit.md" "### Self-Check"
+    check_required_heading "$dir/goat-audit.md" "## Pass 1"
+    check_required_heading "$dir/goat-audit.md" "## Pass 2"
+    check_required_heading "$dir/goat-audit.md" "## Pass 3"
+    check_required_heading "$dir/goat-audit.md" "## Pass 4"
+    check_required_heading "$dir/goat-audit.md" "## Self-Check"
 
-    check_required_heading "$dir/code-review.md" "## Findings Order"
-    check_required_heading "$dir/code-review.md" "## Review Checklist"
-    check_required_heading "$dir/code-review.md" "## Output"
+    check_required_heading "$dir/goat-review.md" "## Severity"
+    check_required_heading "$dir/goat-review.md" "## Review Flow"
+    check_required_heading "$dir/goat-review.md" "## Output"
 }
 
 check_docs() {
@@ -209,14 +236,43 @@ check_tasks() {
     fi
 }
 
-check_evals() {
-    local eval_dir="$REPO_ROOT/codex-evals"
-    local eval_count
+check_scripts() {
+    local script
+    for script in \
+        "$REPO_ROOT/scripts/context-validate.sh" \
+        "$REPO_ROOT/scripts/deny-dangerous.sh" \
+        "$REPO_ROOT/scripts/preflight-checks.sh"; do
+        if [[ ! -x "$script" ]]; then
+            fail "Verification script is not executable: ${script#"$REPO_ROOT"/}"
+        fi
+    done
+}
 
-    [[ -f "$eval_dir/README.md" ]] || fail "Missing codex-evals/README.md"
+check_evals() {
+    local eval_dir="$REPO_ROOT/agent-evals"
+    local eval_count
+    local eval_file
+
+    [[ -f "$eval_dir/README.md" ]] || fail "Missing agent-evals/README.md"
     eval_count=$(find "$eval_dir" -maxdepth 1 -type f -name '*.md' ! -name 'README.md' | wc -l)
-    if (( eval_count < 5 )); then
-        fail "Expected at least 5 Codex evals, found $eval_count"
+    if (( eval_count < 1 )); then
+        fail "Expected at least 1 agent eval, found $eval_count"
+    fi
+
+    while IFS= read -r -d '' eval_file; do
+        check_required_heading "$eval_file" "**Origin:**"
+        check_required_heading "$eval_file" "**Agents:**"
+        check_required_heading "$eval_file" "**Bug description:**"
+        check_required_heading "$eval_file" "**Replay prompt:**"
+        check_required_heading "$eval_file" "**Expected outcome:**"
+        check_required_heading "$eval_file" "**Failure mode tested:**"
+    done < <(find "$eval_dir" -maxdepth 1 -type f -name '*.md' ! -name 'README.md' -print0 | sort -z)
+
+    if [[ -d "$REPO_ROOT/.claude/skills" ]]; then
+        eval_count=$(find "$REPO_ROOT/.claude/skills" -mindepth 1 -maxdepth 1 -type d -name 'goat-*' | wc -l)
+        if (( eval_count != 5 )); then
+            fail "Expected 5 Claude goat skill directories, found $eval_count"
+        fi
     fi
 }
 
@@ -236,11 +292,13 @@ REPO_ROOT="$(git -C "$SCRIPT_DIR/.." rev-parse --show-toplevel)"
 FAILURES=0
 
 log "Validating Codex workflow assets"
+check_agents
 check_router_targets
 check_playbooks
 check_docs
 check_footguns
 check_tasks
+check_scripts
 check_evals
 
 if (( FAILURES > 0 )); then

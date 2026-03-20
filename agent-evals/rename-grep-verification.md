@@ -1,6 +1,7 @@
 # Eval: Rename Without Grep Verification
 
-**Origin:** real-history (commit c72338a — start.sh renamed to start-dev.sh)
+**Origin:** real-incident (commit c72338a — start.sh renamed to start-dev.sh)
+**Agents:** all
 
 **Bug description:** When `dashboard/start.sh` was renamed to `dashboard/start-dev.sh`, references to the old name existed in CHANGELOG.md, README.md, help.sh, and docs/code-map.md. Missing any reference would leave stale pointers.
 

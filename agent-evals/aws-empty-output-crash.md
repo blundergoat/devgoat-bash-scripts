@@ -1,6 +1,7 @@
 # Eval: AWS Empty Output Crash
 
-**Origin:** real-history (commits 0c6c604, 00a00b9)
+**Origin:** real-incident (commits 0c6c604, 00a00b9)
+**Agents:** all
 
 **Bug description:** AWS scripts crashed when AWS CLI commands returned empty output (e.g., no ECS clusters, no security groups). The jq parsing assumed non-empty JSON, causing `jq: error: null is not iterable` failures under `set -e`. Four separate commits were needed to fix all instances across aws-costs.sh, aws-rightsizing.sh, and aws-security.sh.
 

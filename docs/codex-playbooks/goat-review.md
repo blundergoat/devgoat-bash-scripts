@@ -1,14 +1,14 @@
-# Code Review Playbook
+# GOAT Review
 
 Use this when the user asks for a review or when a change needs a structured risk pass.
 
-## Findings Order
+## Severity
 
-- `P0` data loss, security, or destructive workflow risk
-- `P1` behavioural regression or broken contract
-- `P2` test gap, maintainability risk, or fragile coupling
+- `P0 MUST` mean data loss, security, or destructive workflow risk.
+- `P1 MUST` mean behavioural regression or broken contract.
+- `P2 SHOULD` mean test gap, maintainability risk, or fragile coupling.
 
-## Review Checklist
+## Review Flow
 
 - Read the diff and the adjacent consumers.
 - Verify changed code against existing conventions in the same domain.

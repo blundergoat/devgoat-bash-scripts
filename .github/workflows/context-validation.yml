@@ -10,7 +10,6 @@ on:
       - '.github/workflows/context-validation.yml'
       - 'docs/**'
       - 'scripts/**'
-      - 'codex-evals/**'
       - 'agent-evals/**'
 
 jobs:
@@ -19,6 +18,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate Codex runtime size
+        run: |
+          agents_lines=$(wc -l < AGENTS.md)
+          echo "AGENTS.md: ${agents_lines} lines"
+          if [ "${agents_lines}" -gt 150 ]; then
+            echo "::error::AGENTS.md exceeds 150 line hard ceiling (${agents_lines} lines)"
+            exit 1
+          elif [ "${agents_lines}" -gt 135 ]; then
+            echo "::warning::AGENTS.md exceeds 135 line target for Codex collections (${agents_lines} lines)"
+          fi
 
       - name: Validate Codex workflow assets
         run: |

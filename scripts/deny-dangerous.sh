@@ -33,12 +33,15 @@ Usage:
   ./scripts/deny-dangerous.sh --self-test
 
 This script documents the deny policy for human review, CI, and preflight.
-It does not intercept commands automatically.
+It does not intercept commands automatically and is not equivalent to
+Claude Code's hook-based blocking or a native Codex permissions deny list.
 EOF
 }
 
 show_policy() {
     cat <<'EOF'
+Policy only: this script is documentation plus self-tests. It is NOT a runtime blocker.
+
 Blocked commands and edits:
   - any git commit
   - any git push

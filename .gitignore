@@ -1,28 +1,45 @@
+# OS
 .DS_Store
 Thumbs.db
 *:Zone.Identifier
+
+# Editors
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
+
+# Secrets
 .env
 .env.local
 .env.*.local
-*.log
-node_modules/
-__pycache__/
-*.pyc
-.venv/
+.env.production
+
+# Claude Code
 .claude/plans/
 .claude/memory/
 .claude/projects/
 .claude/worktrees/
 .claude/settings.local.json
+
+# Session files
 tasks/todo.md
 tasks/handoff.md
+/commit.md
+/release.md
+
+# Runtime / build
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+*.log
 *.bak
+
+# Infrastructure
 .terraform/
 *.tfstate*
-.env.production
+
+# Project-specific
 dashboard/config.php

@@ -1,13 +1,11 @@
-# AGENTS.md - v2.0 (2026-03-20)
+# AGENTS.md - v2.1 (2026-03-21)
 
 Runtime instructions for Codex. Domain reference: `docs/domain-reference.md`. Ownership split: `docs/guidelines-ownership-split.md`.
 
 ## Project Identity
-
 Shell script collection under `lib/`, PHP dashboard in `dashboard/`, bats tests in `tests/`. Scripts are drop-in helpers or templates with `# ---- CONFIGURATION ----` blocks.
 
 ## Essential Commands
-
 ```bash
 bash -n path/to/script.sh
 shellcheck path/to/script.sh
@@ -24,9 +22,8 @@ bats tests/ --recursive
 ## Execution Loop: READ → CLASSIFY → SCOPE → ACT → VERIFY → LOG
 
 ### READ
-
-- Read relevant files before acting. Cross-domain: read both producer and consumer.
-- Never fabricate repo facts. If you have not read it, say so.
+- MUST read relevant files before acting. Cross-domain: MUST read producer and consumer.
+- MUST NOT fabricate repo facts. If you have not read it, say so.
 
 ```text
 BAD: "The dashboard parser is isolated to PHP."
@@ -34,25 +31,25 @@ GOOD: Read lib/aws/aws-costs.sh and dashboard/aws_ui.php before changing report 
 ```
 
 ### CLASSIFY
-
-Complexity: Hotfix (2 reads / 3 turns) | Standard (4 / 10) | System Change (6 / 20) | Infra (8 / 25). Over budget = re-classify.
-Mode: `Answer`, `Plan`, `Implement`, `Debug`, or `Review`. Question = answer; directive = implement. If ambiguous, ask once.
+| Aspect | Rule |
+| --- | --- |
+| Complexity | Hotfix (2 reads / 3 turns) \| Standard (4 / 10) \| System Change (6 / 20) \| Infrastructure (8 / 25). Over budget = re-classify. |
+| Mode | `Answer`, `Plan`, `Implement`, `Debug`, or `Review`. Question = answer; directive = implement. If ambiguous, ask once. |
 
 ### SCOPE
-
 MUST declare before acting: files to change, non-goals, max blast radius. Expanding beyond scope = stop and re-scope with the human.
 
 ### ACT
-
 | Mode | Behaviour |
 | --- | --- |
 | `Answer` | Explain, report, or compare. No code changes. |
 | `Plan` | Produce the plan or research artefact only. No implementation until asked. |
-| `Implement` | Make the smallest defensible change. 4th read without writing = stop exploring. |
-| `Debug` | Diagnose first, with file:line evidence. Do not patch first and hope. |
+| `Implement` | Make the smallest defensible change. 4th read without writing = stop exploring and start coding or re-scope. |
+| `Debug` | Diagnose first with file:line evidence. No fixes until human reviews diagnosis. |
 | `Review` | Findings first: bugs, risks, regressions, missing tests. Summary second. |
 
-No actions outside declared state without: "Switching to [NEW STATE] because [reason]."
+State: `State: [MODE] | Goal: [one line] | Exit: [condition]`
+Mode transitions MUST be explicit: "Switching to [NEW STATE] because [reason]."
 
 ```text
 BAD: "I created a shared parser abstraction" for one dashboard report.
@@ -60,43 +57,39 @@ GOOD: Patch the existing parser. Extract only when a second consumer appears.
 ```
 
 ### VERIFY
-
-- Run relevant checks after meaningful changes.
-- Isolated failure: note, continue. Cross-boundary/unknown blast radius: stop and report diagnosis.
-- Two failed approaches: stop and report. After renames: `rg` old pattern, confirm zero stale references.
+- MUST run relevant checks after meaningful changes, not only at the end.
+- Level 1 isolated failure: note and continue. Level 2 cross-boundary or unknown blast radius: full stop, diagnose with file:line, wait for the human.
+- Two failed approaches = revert-and-rescope. After renames or moves, MUST run `rg` for the old pattern and report zero stale references.
 
 ### LOG
-
-MUST update when tripped (DoD gate #4). SHOULD update after routine sessions.
+MUST update when tripped (DoD gate #4). SHOULD load only the router targets needed for the current task.
 
 | File | When |
 | --- | --- |
 | `docs/lessons.md` | Behavioural mistake (agent did wrong) |
 | `docs/footguns.md` | Cross-domain landmine (file:line evidence) |
 | `docs/confusion-log.md` | Structural confusion (hard to navigate) |
-
-Mechanical trigger: if VERIFY caught a failure in your code, or you corrected course, lessons.md entry required. After human correction, MUST log immediately. Dual-agent: read learning loop files before appending.
-Use `tasks/todo.md` as task scratchpad. `tasks/handoff.md` for incomplete work.
+Mechanical trigger: if VERIFY caught a failure in code you wrote, or you corrected course, `docs/lessons.md` entry required before DoD satisfied. After human correction, MUST log immediately. Read shared files before appending. Propagate footguns to the nearest routed instruction doc.
 
 ## Autonomy Tiers
 
 ### Always
-
 Read first, then act. Match domain helper sourcing, logging style, and verification pattern. Preserve CONFIGURATION block placeholders.
 
 ### Ask First
-
 - Shared helpers: `lib/ai-cli/_common.sh`, `lib/stacks/_common.sh`, `lib/aws/_aws-common.sh`
-- Any change to a `# ---- CONFIGURATION ----` interface or default
+- Any `# ---- CONFIGURATION ----` interface or default change
 - Strict-mode changes between `set -euo pipefail` and `set -uo pipefail`
 - Repo entrypoints: `help.sh`, `preflight-checks.sh`, `dashboard/start-dev.sh`
-- Shell output consumed by the dashboard, or generated artefacts like `docs/code-map.md`
-- New top-level directories, CI workflow changes, dependency/tooling changes
-
-Checklist: state boundary + files, name downstream consumers, say what will be verified, wait for approval.
+- Shell output consumed by the dashboard, generated artefacts like `docs/code-map.md`, new top-level directories, CI workflow changes, dependency/tooling changes
+Checklist:
+1. Boundary touched: [name]
+2. Related code read: [yes/no]
+3. Footgun entry checked: [relevant entry, or "none"]
+4. Local instruction checked: [.github/instructions/<file> / CLAUDE.md / none]
+5. Rollback command: [exact command]
 
 ### Never
-
 - Delete tests to make checks pass.
 - Edit `.env`, secrets, or credentials.
 - Commit or push unless explicitly asked; never use `--no-verify`.
@@ -104,16 +97,19 @@ Checklist: state boundary + files, name downstream consumers, say what will be v
 - Hand-edit generated `docs/code-map.md`.
 
 ## Definition of Done
+MUST confirm all 6 gates: relevant lint/syntax/test/smoke checks passed or a concrete gap was reported; user-visible behaviour was verified from the changed path; no Ask First boundary was crossed without approval; `docs/footguns.md` or `docs/lessons.md` was updated if tripped; `tasks/todo.md` and `tasks/handoff.md` reflect task state; after renames or moves, `rg` confirmed no stale references.
 
-1. Relevant lint, syntax, test, and smoke checks passed, or a concrete gap is reported.
-2. User-visible behaviour is verified from the changed path, not assumed.
-3. No Ask First boundary was crossed without approval.
-4. `docs/footguns.md` or `docs/lessons.md` was updated if the task tripped one.
-5. `tasks/todo.md` and `tasks/handoff.md` reflect the current state of the task.
-6. After renames or moves, `rg` confirmed no stale references to the old name.
+## Working Memory
+SHOULD use `tasks/todo.md` for 5+ turn work. SHOULD write `tasks/handoff.md` before ending incomplete work.
+Context ladder: re-read router targets, restate scope, then split a follow-up task with handoff if context is still muddy.
+
+## Sub-Agent Objectives
+Sub-agents SHOULD get one focused objective, a structured return (`paths`, `evidence`, `confidence`, `next step`), and a 5-call budget.
+
+## Communication When Blocked
+Ask exactly one question, include a recommended default, and stop after the question.
 
 ## Router
-
 | Topic | Path |
 | --- | --- |
 | Architecture | `docs/architecture.md` |
@@ -122,13 +118,15 @@ Checklist: state boundary + files, name downstream consumers, say what will be v
 | Footguns | `docs/footguns.md` |
 | Lessons | `docs/lessons.md` |
 | Confusion log | `docs/confusion-log.md` |
-| Preflight playbook | `docs/codex-playbooks/preflight.md` |
-| Research playbook | `docs/codex-playbooks/research.md` |
-| Debug playbook | `docs/codex-playbooks/debug-investigate.md` |
-| Audit playbook | `docs/codex-playbooks/audit.md` |
-| Code review playbook | `docs/codex-playbooks/code-review.md` |
-| Verification scripts | `scripts/context-validate.sh`, `deny-dangerous.sh`, `preflight-checks.sh` |
-| Task files | `tasks/todo.md`, `tasks/handoff.md` |
+| Domain instructions | `.github/instructions/*.instructions.md` |
+| Codex preflight | `docs/codex-playbooks/goat-preflight.md` |
+| Codex research | `docs/codex-playbooks/goat-research.md` |
+| Codex debug | `docs/codex-playbooks/goat-debug.md` |
+| Codex audit | `docs/codex-playbooks/goat-audit.md` |
+| Codex review | `docs/codex-playbooks/goat-review.md` |
+| Verification scripts | `scripts/*.sh` |
+| Task notes | `tasks/todo.md` |
+| Session handoff | `tasks/handoff.md` |
+| Handoff template | `tasks/handoff-template.md` |
 | Claude runtime | `CLAUDE.md` |
-| Claude evals | `agent-evals/` |
-| Codex evals | `codex-evals/` |
+| Agent evals | `agent-evals/` |

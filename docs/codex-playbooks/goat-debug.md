@@ -1,4 +1,4 @@
-# Debug Investigate Playbook
+# GOAT Debug
 
 Use this when behaviour is broken or inconsistent and the task is diagnosis-first.
 

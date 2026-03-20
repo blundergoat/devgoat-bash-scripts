@@ -40,3 +40,9 @@ CLAUDE.md upgraded to GOAT Flow system spec v0.7. Changes:
 | Agent ignore | None | .copilotignore, .cursorignore | Prevent secret leakage to other agents |
 | CI | Skills + line count | Added router table reference validation | Catch broken references on PR |
 | RFC 2119 | Partial | Full pass on CLAUDE.md | Consistent rule strength signalling |
+
+## Codex vs Claude Notes
+
+- Shared-guidelines audit was skipped because this repo uses domain-scoped `.github/instructions/*.instructions.md`, not a shared workflow guidelines file.
+- Claude keeps slash-command skills in `.claude/skills/goat-*`; Codex uses document playbooks in `docs/codex-playbooks/goat-*.md`.
+- `scripts/deny-dangerous.sh` documents policy and verifies examples, but it is not a runtime blocker or permission deny list. Codex has no equivalent to Claude Code's hook-based enforcement.

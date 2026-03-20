@@ -32,7 +32,7 @@ No actions outside declared state without: "Switching to [NEW STATE] because [re
 | Plan | Produce artefact only. No app code. Exit on LGTM |
 | Implement | Code in 2-3 turns. 4th read without writing = stop |
 | Explain | Walkthrough only. No code changes unless asked |
-| Debug | Diagnosis with file:line first. Fixes after human reviews |
+| Debug | Diagnosis with file:line first. No fixes until human reviews diagnosis |
 | Review | Investigate first. Never blindly apply suggestions |
 
 ```
@@ -60,7 +60,7 @@ Propagate footguns as one-line summaries to relevant local CLAUDE.md.
 
 **Always:** Run tests/lint, read any file, write scripts, append to log files
 
-**Ask First** (MUST: boundary named, related code read, footgun checked, local CLAUDE.md checked, rollback command):
+**Ask First:**
 - `_common.sh` / `_aws-common.sh` changes (sourced by many scripts)
 - CONFIGURATION block interface changes (adding/removing variables)
 - Scripts in `lib/ai-cli/` that sanitise WSL PATH
@@ -68,6 +68,12 @@ Propagate footguns as one-line summaries to relevant local CLAUDE.md.
 - Changing a script's logging paradigm (MUST match siblings)
 - Editing `.github/instructions/` files
 - Cross-domain changes. Strict mode exception changes
+Checklist:
+1. Boundary touched: [name]
+2. Related code read: [yes/no]
+3. Footgun entry checked: [relevant entry, or "none"]
+4. Local instruction checked: [local CLAUDE.md / .github/instructions/ / none]
+5. Rollback command: [exact command]
 
 **Never:** Delete tests to pass builds. Modify .env/secrets. Push to main. Force push. Change CONFIGURATION block values. Commit unless asked. Modify lockfiles or generated code
 
@@ -110,4 +116,3 @@ SHOULD use `tasks/todo.md` for 5+ turn tasks. SHOULD write `tasks/handoff.md` be
 | Agent evals | `agent-evals/` |
 | Handoff template | `tasks/handoff-template.md` |
 | Codex runtime | `AGENTS.md` |
-| Codex evals | `codex-evals/` |
