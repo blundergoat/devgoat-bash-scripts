@@ -1,4 +1,4 @@
-# /debug-investigate - Diagnosis-First Shell Debugging
+# /goat-debug - Diagnosis-First Shell Debugging
 
 Use this when a shell script is failing, behaviour is inconsistent, or the root cause is unknown.
 

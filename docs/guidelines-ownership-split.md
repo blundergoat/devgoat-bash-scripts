@@ -23,3 +23,20 @@ This repo started with `AGENTS.md` acting as both a runtime file and a domain re
 - `AGENTS.md` now owns the execution loop, autonomy tiers, definition of done, task files, and workflow router.
 - `docs/domain-reference.md` owns repo mechanics, common workflows, entrypoint descriptions, and the domain instruction router.
 - `docs/guidelines-ownership-split.md` records the migration so future edits do not drift back into overlap.
+
+## GOAT Flow v2.0 Migration (2026-03-20)
+
+CLAUDE.md upgraded to GOAT Flow system spec v0.7. Changes:
+
+| Change | Before | After | Why |
+| --- | --- | --- | --- |
+| Execution loop | READ→CLASSIFY→ACT→VERIFY→LOG | READ→CLASSIFY→SCOPE→ACT→VERIFY→LOG | SCOPE step prevents silent scope creep |
+| CLASSIFY | Mode only | Complexity tiers (Hotfix/Standard/System/Infra) with read/turn budgets | Prevents planning loops and drift |
+| Autonomy micro-checklist | 4 items | 5 items (added local CLAUDE.md check) | Layer 2 awareness |
+| Never tier | No lockfile/generated rule | Added lockfile + generated code prohibition | Agents hallucinate version bumps |
+| LOG section | Two files | Three files (added confusion-log.md) | Structural confusion tracking |
+| Skills | preflight, code-review, debug-investigate, audit, research | goat-preflight, goat-review, goat-debug, goat-audit, goat-research | Avoid shadowing built-in commands (AP2) |
+| Enforcement | deny-dangerous.sh only | Added lockfile/generated code blocks | Defence in depth |
+| Agent ignore | None | .copilotignore, .cursorignore | Prevent secret leakage to other agents |
+| CI | Skills + line count | Added router table reference validation | Catch broken references on PR |
+| RFC 2119 | Partial | Full pass on CLAUDE.md | Consistent rule strength signalling |

@@ -15,4 +15,10 @@ _(none yet)_
 
 ## Entries
 
-_(none yet)_
+### Rename without grep verification
+
+**created_at:** 2026-03-15
+
+When renaming or moving a file, agents skip the grep-for-old-pattern step. This caused stale references in CHANGELOG.md, README.md, help.sh, and docs/code-map.md after `dashboard/start.sh` was renamed to `dashboard/start-dev.sh`. DoD gate #6 exists for this reason: after renames, grep for the old name and fix every reference before declaring done.
+
+**Origin:** agent-evals/rename-grep-verification.md (commit c72338a)

@@ -1,10 +1,10 @@
-# AGENTS.md - v1.0 (2026-03-15)
+# AGENTS.md - v2.0 (2026-03-20)
 
-Runtime instructions for Codex in `devgoat-bash-scripts`. Repo-specific engineering patterns that used to live here now live in `docs/domain-reference.md`. The ownership split is recorded in `docs/guidelines-ownership-split.md`.
+Runtime instructions for Codex. Domain reference: `docs/domain-reference.md`. Ownership split: `docs/guidelines-ownership-split.md`.
 
 ## Project Identity
 
-This repo is a collection of reusable shell scripts organised by domain under `lib/`, plus a PHP dashboard in `dashboard/` and bats tests in `tests/`. Scripts are either drop-in helpers or templates with a `# ---- CONFIGURATION ----` block.
+Shell script collection under `lib/`, PHP dashboard in `dashboard/`, bats tests in `tests/`. Scripts are drop-in helpers or templates with `# ---- CONFIGURATION ----` blocks.
 
 ## Essential Commands
 
@@ -21,11 +21,11 @@ bats tests/ --recursive
 ./lib/codegen/generate-code-map.sh
 ```
 
-## Default Loop
+## Execution Loop: READ → CLASSIFY → SCOPE → ACT → VERIFY → LOG
 
 ### READ
 
-- Read the relevant files before acting. For cross-domain work, read both the producer and the consumer.
+- Read relevant files before acting. Cross-domain: read both producer and consumer.
 - Never fabricate repo facts. If you have not read it, say so.
 
 ```text
@@ -35,9 +35,12 @@ GOOD: Read lib/aws/aws-costs.sh and dashboard/aws_ui.php before changing report 
 
 ### CLASSIFY
 
-- State mode and complexity before substantial work: `Answer`, `Plan`, `Implement`, `Debug`, or `Review`; `Hotfix`, `Standard`, `System`, or `Infra`.
-- Questions get answers, not edits. Directives get implementation. If intent is ambiguous, ask once.
-- State mode changes explicitly; do not drift from explanation into implementation.
+Complexity: Hotfix (2 reads / 3 turns) | Standard (4 / 10) | System Change (6 / 20) | Infra (8 / 25). Over budget = re-classify.
+Mode: `Answer`, `Plan`, `Implement`, `Debug`, or `Review`. Question = answer; directive = implement. If ambiguous, ask once.
+
+### SCOPE
+
+MUST declare before acting: files to change, non-goals, max blast radius. Expanding beyond scope = stop and re-scope with the human.
 
 ### ACT
 
@@ -45,11 +48,11 @@ GOOD: Read lib/aws/aws-costs.sh and dashboard/aws_ui.php before changing report 
 | --- | --- |
 | `Answer` | Explain, report, or compare. No code changes. |
 | `Plan` | Produce the plan or research artefact only. No implementation until asked. |
-| `Implement` | Make the smallest defensible change after reading the code. Do not stop at a speculative plan unless blocked. |
+| `Implement` | Make the smallest defensible change. 4th read without writing = stop exploring. |
 | `Debug` | Diagnose first, with file:line evidence. Do not patch first and hope. |
 | `Review` | Findings first: bugs, risks, regressions, missing tests. Summary second. |
 
-Anti-planning-loop: if the user asked for a fix and the path is clear after reading, implement it.
+No actions outside declared state without: "Switching to [NEW STATE] because [reason]."
 
 ```text
 BAD: "I created a shared parser abstraction" for one dashboard report.
@@ -59,25 +62,27 @@ GOOD: Patch the existing parser. Extract only when a second consumer appears.
 ### VERIFY
 
 - Run relevant checks after meaningful changes.
-- Isolated failure: note it, finish safe work, and report the gap.
-- Cross-boundary regression or unknown blast radius: stop and report the diagnosis before pushing further.
-- Two failed approaches on the same fix: stop and report what failed and why.
-- After renames or moves, `rg` for the old pattern and confirm zero stale references.
+- Isolated failure: note, continue. Cross-boundary/unknown blast radius: stop and report diagnosis.
+- Two failed approaches: stop and report. After renames: `rg` old pattern, confirm zero stale references.
 
-### RECORD
+### LOG
 
-- Update `docs/footguns.md` when you hit a real cross-domain landmine with verified evidence.
-- Update `docs/lessons.md` for repeatable agent-behaviour mistakes.
-- Use `tasks/todo.md` as the task scratchpad and `tasks/handoff.md` when work stops mid-task.
-- Load router targets on demand. Keep context tight.
+MUST update when tripped (DoD gate #4). SHOULD update after routine sessions.
+
+| File | When |
+| --- | --- |
+| `docs/lessons.md` | Behavioural mistake (agent did wrong) |
+| `docs/footguns.md` | Cross-domain landmine (file:line evidence) |
+| `docs/confusion-log.md` | Structural confusion (hard to navigate) |
+
+Mechanical trigger: if VERIFY caught a failure in your code, or you corrected course, lessons.md entry required. After human correction, MUST log immediately. Dual-agent: read learning loop files before appending.
+Use `tasks/todo.md` as task scratchpad. `tasks/handoff.md` for incomplete work.
 
 ## Autonomy Tiers
 
 ### Always
 
-- Read first, then act.
-- Preserve template placeholders inside `# ---- CONFIGURATION ----` blocks unless the interface itself is being changed.
-- Match the touched domain's helper sourcing, logging style, and verification pattern.
+Read first, then act. Match domain helper sourcing, logging style, and verification pattern. Preserve CONFIGURATION block placeholders.
 
 ### Ask First
 
@@ -88,11 +93,7 @@ GOOD: Patch the existing parser. Extract only when a second consumer appears.
 - Shell output consumed by the dashboard, or generated artefacts like `docs/code-map.md`
 - New top-level directories, CI workflow changes, dependency/tooling changes
 
-Ask First checklist:
-- State the files and boundary being crossed.
-- Name the downstream consumers or users.
-- Say what will be verified after the change.
-- Wait for approval before editing.
+Checklist: state boundary + files, name downstream consumers, say what will be verified, wait for approval.
 
 ### Never
 
@@ -113,23 +114,21 @@ Ask First checklist:
 
 ## Router
 
-| Topic | Path | Use When |
-| --- | --- | --- |
-| Architecture | `docs/architecture.md` | Repo shape, data flows, constraints |
-| Domain reference | `docs/domain-reference.md` | Shell patterns, workflows, entrypoints |
-| Ownership split | `docs/guidelines-ownership-split.md` | Why AGENTS was trimmed and what moved |
-| Lessons log | `docs/lessons.md` | Behavioural mistakes worth retaining |
-| Footguns log | `docs/footguns.md` | Cross-domain traps and evidence |
-| Task scratchpad | `tasks/todo.md` | Working notes during a task |
-| Handoff file | `tasks/handoff.md` | Incomplete-task handoff |
-| Preflight playbook | `docs/codex-playbooks/preflight.md` | Picking the right checks |
-| Research playbook | `docs/codex-playbooks/research.md` | Deep-read, no-code investigations |
-| Debug playbook | `docs/codex-playbooks/debug-investigate.md` | Diagnosis-first debugging |
-| Audit playbook | `docs/codex-playbooks/audit.md` | Repo/process audits |
-| Code review playbook | `docs/codex-playbooks/code-review.md` | Structured review work |
-| Context validator | `scripts/context-validate.sh` | Validate workflow files and router targets |
-| Deny policy | `scripts/deny-dangerous.sh` | Review blocked commands and self-tests |
-| Workflow preflight | `scripts/preflight-checks.sh` | Run the Codex verification suite |
-| Claude runtime | `CLAUDE.md` | Compare the Claude-side implementation |
-| Claude evals | `agent-evals/README.md` | Existing Claude replay fixtures |
-| Codex evals | `codex-evals/README.md` | Codex replay fixtures |
+| Topic | Path |
+| --- | --- |
+| Architecture | `docs/architecture.md` |
+| Domain reference | `docs/domain-reference.md` |
+| Ownership split | `docs/guidelines-ownership-split.md` |
+| Footguns | `docs/footguns.md` |
+| Lessons | `docs/lessons.md` |
+| Confusion log | `docs/confusion-log.md` |
+| Preflight playbook | `docs/codex-playbooks/preflight.md` |
+| Research playbook | `docs/codex-playbooks/research.md` |
+| Debug playbook | `docs/codex-playbooks/debug-investigate.md` |
+| Audit playbook | `docs/codex-playbooks/audit.md` |
+| Code review playbook | `docs/codex-playbooks/code-review.md` |
+| Verification scripts | `scripts/context-validate.sh`, `deny-dangerous.sh`, `preflight-checks.sh` |
+| Task files | `tasks/todo.md`, `tasks/handoff.md` |
+| Claude runtime | `CLAUDE.md` |
+| Claude evals | `agent-evals/` |
+| Codex evals | `codex-evals/` |

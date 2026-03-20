@@ -1,4 +1,4 @@
-# /preflight — Preflight Checks for Shell Scripts
+# /goat-preflight — Preflight Checks for Shell Scripts
 
 Run validation checks on all modified shell scripts before declaring work complete.
 

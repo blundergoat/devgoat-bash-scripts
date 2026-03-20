@@ -33,7 +33,7 @@ jobs:
             echo "::error::CLAUDE.md exceeds 150 line hard ceiling (${claude_lines} lines)"
             exit 1
           elif [ "${claude_lines}" -gt 100 ]; then
-            echo "::warning::CLAUDE.md exceeds 100 line target for libraries (${claude_lines} lines)"
+            echo "::warning::CLAUDE.md exceeds 100 line target for collections (${claude_lines} lines)"
           fi
 
           errors=0
@@ -44,6 +44,28 @@ jobs:
             fi
           done < <(find .claude/skills -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
 
+          exit "${errors}"
+
+      - name: Router table references exist
+        run: |
+          errors=0
+          for f in docs/domain-reference.md docs/architecture.md docs/code-map.md \
+                   docs/bats-core.md docs/footguns.md docs/lessons.md \
+                   .github/instructions/shell-conventions.instructions.md \
+                   agent-evals/README.md tasks/handoff-template.md; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Router table references $f which does not exist"
+              errors=$((errors + 1))
+            fi
+          done
+          for d in .claude/skills/goat-preflight .claude/skills/goat-review \
+                   .claude/skills/goat-debug .claude/skills/goat-audit \
+                   .claude/skills/goat-research; do
+            if [ ! -d "$d" ]; then
+              echo "::error::Router table references $d/ which does not exist"
+              errors=$((errors + 1))
+            fi
+          done
           exit "${errors}"
 
       - name: Local CLAUDE files stay short

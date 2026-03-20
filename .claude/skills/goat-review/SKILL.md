@@ -1,4 +1,4 @@
-# /code-review - Shell Script Code Review
+# /goat-review - Shell Script Code Review
 
 Review shell scripts for correctness, convention compliance, and potential issues.
 

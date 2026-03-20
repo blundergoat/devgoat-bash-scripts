@@ -1,4 +1,4 @@
-# /audit - Four-Pass Shell Audit
+# /goat-audit - Four-Pass Shell Audit
 
 Use this for structured audits of scripts, directories, or workflow changes.
 
