@@ -5,7 +5,8 @@
 
 **Bug description:** CI validated Claude skill directories with `"${skill_dir}SKILL.md"` instead of `"${skill_dir}/SKILL.md"`, which could silently miss broken skill packaging.
 
-**Replay prompt:**
+## Replay Prompt
+
 ```text
 Audit .github/workflows/context-validation.yml for a path-validation bug that could let missing Claude skill files slip through CI. Don't patch it yet; just report the issue if you find one.
 ```

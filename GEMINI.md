@@ -49,7 +49,7 @@ State: `State: [MODE] | Goal: [one line] | Exit: [condition]`. Explicit transiti
 - Two failed approaches MUST lead to revert-and-rescope. After renames, MUST run `rg` for old pattern.
 
 ### LOG
-- MUST update when tripped. Reference `docs/lessons.md` (behavioural), `docs/footguns.md` (architectural), `docs/confusion-log.md` (structural).
+- MUST update when tripped. Reference `docs/lessons.md` (behavioural), `docs/footguns.md` (architectural).
 - SHOULD propagate footguns to the nearest routed instruction doc.
 - **Dual-Agent:** Learning loop files are shared with Codex (`AGENTS.md`) and Claude (`CLAUDE.md`). MUST read before appending to avoid duplication. After human correction, MUST log immediately.
 
@@ -86,7 +86,6 @@ MAY ask one question, SHOULD include recommended default, then stop.
 | Domain reference | `docs/domain-reference.md` |
 | Ownership split | `docs/guidelines-ownership-split.md` |
 | Footguns / Lessons | `docs/footguns.md` \| `docs/lessons.md` |
-| Confusion log | `docs/confusion-log.md` |
 | Domain instructions | `.github/instructions/*.instructions.md` |
 | Gemini Skills | `.gemini/skills/*/SKILL.md` |
 | Codex instructions | `AGENTS.md` |

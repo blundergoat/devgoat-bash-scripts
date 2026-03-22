@@ -5,7 +5,8 @@
 
 **Bug description:** Four scripts hardcoded REPO_ROOT resolution using the script's own directory (`dirname`) instead of the git working tree root. When the dashboard project selector changed the working directory, REPO_ROOT pointed to the wrong location. Fixed by using `git rev-parse --show-toplevel` consistently.
 
-**Replay prompt:**
+## Replay Prompt
+
 ```
 I think some scripts might be resolving the project root incorrectly. Can you check how REPO_ROOT or PROJECT_ROOT is resolved across scripts in lib/ and the dashboard? Tell me which pattern each uses.
 ```

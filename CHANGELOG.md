@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [v1.5.1] - 2026-03-22
+
+### Added
+
+- **`ai/instructions/`** — agent-neutral instruction files shared across Claude, Codex, and Gemini: `base.md` (shell conventions, strict mode, logging, bats), `code-review.md` (review checklist and common defects), `git-commit.md` (commit format and scope rules).
+- **`ai/README.md`** — routing map for agent instruction files.
+- **`.github/git-commit-instructions.md`** — lightweight commit guidance for GitHub-native tooling, pointing to `ai/instructions/git-commit.md`.
+- **`docs/decisions/.gitkeep`** — directory for architecture decision records.
+
+### Changed
+
+- **CLAUDE.md** — fixed router table paths (added missing `docs/` prefix on `architecture.md`, `code-map.md`, `bats-core.md`). Added `ai/instructions/` to router and Ask First boundary. Compacted VERIFY bullet points.
+- **AGENTS.md / GEMINI.md** — removed stale `docs/confusion-log.md` references from LOG tables and router tables.
+- **`.github/instructions/aws.instructions.md`** — removed stale `deploy-ecr-ecs.sh` references (script was deleted in v1.3.0).
+- **`.github/instructions/stacks.instructions.md`** — fixed incorrect "only PHP file in the repo" claim; now notes `dashboard/` also contains PHP files.
+- **`.github/workflows/context-validation.yml`** — added `ai/**` and `.github/git-commit-instructions.md` to CI trigger paths.
+- **`agent-evals/*.md`** (9 files) — standardized replay prompt from inline bold to `## Replay Prompt` H2 heading.
+
+### Removed
+
+- **`docs/confusion-log.md` references** — file never existed; removed dangling pointers from all three runtime files.
+
+---
+
 ## [v1.5.0] - 2026-03-21
 
 ### Added

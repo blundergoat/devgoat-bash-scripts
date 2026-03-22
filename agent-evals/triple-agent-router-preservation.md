@@ -5,7 +5,8 @@
 
 **Bug description:** When updating the router table in `GEMINI.md`, a single-agent model might accidentally drop the paths for `CLAUDE.md` or `AGENTS.md`, breaking the visibility for other agents in a triple-agent project.
 
-**Replay prompt:**
+## Replay Prompt
+
 ```text
 I need to add a new domain-specific instruction file for the 'dashboard/' directory under .github/instructions/dashboard.instructions.md. Update the router table in GEMINI.md to include it.
 ```

@@ -39,10 +39,9 @@ No actions outside declared state without: "Switching to [NEW STATE] because [re
 ✅ Inline functions. Extract when second consumer appears
 ```
 **VERIFY** — MUST run after each change: `bash -n` → `shellcheck` → `bats tests/ --recursive`
-- Level 1 (isolated failure): note, continue
-- Level 2 (cross-domain/security): MUST full stop, diagnosis with file:line, wait for human
+- Level 1 (isolated failure): note, continue. Level 2 (cross-domain/security): MUST full stop, diagnosis with file:line, wait for human
 - Two corrections on same approach = MUST rewind
-Recovery: missing context → read the file first. Out-of-scope → name boundary and redirect. Conflicting instructions → flag and ask.
+Recovery: missing context → read first. Out-of-scope → name boundary, redirect. Conflicting instructions → flag, ask.
 
 **LOG** — MUST update when tripped (DoD gate #4). SHOULD load `docs/footguns.md` at Ask First boundaries.
 
@@ -50,7 +49,6 @@ Recovery: missing context → read the file first. Out-of-scope → name boundar
 |------|------|
 | `docs/lessons.md` | Behavioural mistake (agent did wrong) |
 | `docs/footguns.md` | Cross-domain landmine (file:line evidence) |
-| `docs/confusion-log.md` | Structural confusion (hard to navigate) |
 | `docs/decisions/` | Significant technical decision (context + rationale) |
 
 Mechanical trigger: if VERIFY caught a failure in your code, or you corrected course, lessons.md entry required before DoD satisfied. After human correction, MUST log immediately.
@@ -61,13 +59,13 @@ Propagate footguns as one-line summaries to relevant local CLAUDE.md.
 
 **Always:** Run tests/lint, read any file, write scripts, append to log files
 
-**Ask First:**
+**Ask First** (project-specific boundaries for `lib/`, `lib/aws/`, `lib/stacks/`, `lib/ai-cli/`):
 - `_common.sh` / `_aws-common.sh` changes (sourced by many scripts)
 - CONFIGURATION block interface changes (adding/removing variables)
 - Scripts in `lib/ai-cli/` that sanitise WSL PATH
 - Adding new domains/directories under `lib/`
 - Changing a script's logging paradigm (MUST match siblings)
-- Editing `.github/instructions/` files
+- Editing `ai/instructions/` or `.github/instructions/` files
 - Cross-domain changes. Strict mode exception changes
 Checklist:
 1. Boundary touched: [name]
@@ -102,12 +100,11 @@ When sources conflict: (1) user's explicit instruction > (2) CLAUDE.md > (3) set
 
 | Resource | Path |
 |----------|------|
-| Docs | `docs/domain-reference.md`, `architecture.md`, `code-map.md`, `bats-core.md` |
+| Docs | `docs/domain-reference.md`, `docs/architecture.md`, `docs/code-map.md`, `docs/bats-core.md` |
 | Footguns | `docs/footguns.md` |
 | Lessons | `docs/lessons.md` |
-| Confusion log | `docs/confusion-log.md` |
 | Decisions | `docs/decisions/` |
-| Instructions | `.github/instructions/{shell-conventions,ai-cli,aws,stacks,dev}.instructions.md` |
+| Instructions | `ai/instructions/`, `.github/instructions/` |
 | Preflight skill | `.claude/skills/goat-preflight/` |
 | Investigate skill | `.claude/skills/goat-investigate/` |
 | Debug skill | `.claude/skills/goat-debug/` |

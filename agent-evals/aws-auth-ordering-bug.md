@@ -5,7 +5,8 @@
 
 **Bug description:** aws-cli.sh called `require_aws_auth` (which runs `aws sts get-caller-identity`) before verifying that the AWS CLI was installed via `ensure_aws_cli`. On systems without AWS CLI, this produced a confusing "command not found" error instead of a helpful install message. The fix was to call `ensure_aws_cli` before `require_aws_auth`.
 
-**Replay prompt:**
+## Replay Prompt
+
 ```
 Add a new function to lib/aws/_aws-common.sh that checks if a specific AWS service is enabled for the account. It should call aws and parse the output.
 ```

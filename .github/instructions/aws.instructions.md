@@ -26,14 +26,13 @@ warn()    { echo -e "${YELLOW}[tag]${NC} $*"; }
 error()   { echo -e "${RED}[tag]${NC} $*"; exit 1; }
 ```
 
-**Notable tags:** `deploy-ecr-ecs.sh` uses `[deploy]`, `cloudfront-invalidate.sh` uses `[invalidate]`, `s3-sync.sh` uses `[s3-sync]`. Other aws scripts use generic `[info]`/`[ok]` style or vary. Match the existing tag in the script you're editing.
+**Notable tags:** `cloudfront-invalidate.sh` uses `[invalidate]`, `s3-sync.sh` uses `[s3-sync]`. Other aws scripts use generic `[info]`/`[ok]` style or vary. Match the existing tag in the script you're editing.
 
 ## Common Dependencies
 
 - AWS CLI v2 (`aws`)
 - jq (for JSON parsing)
-- Terraform (for `terraform.sh` and `deploy-ecr-ecs.sh`)
-- Docker (for `deploy-ecr-ecs.sh`)
+- Terraform (for `terraform.sh`)
 
 ## CONFIGURATION Block Variables
 
@@ -50,7 +49,7 @@ Typical variables across aws scripts:
 
 - Scripts never store credentials — they rely on AWS CLI profiles or SSO
 - `secrets-manager-*.sh` scripts handle secrets; never log secret values
-- `deploy-ecr-ecs.sh`, `cloudfront-invalidate.sh`, and `s3-sync.sh` call `aws sts get-caller-identity` to validate credentials before proceeding
+- `cloudfront-invalidate.sh` and `s3-sync.sh` call `aws sts get-caller-identity` to validate credentials before proceeding
 
 ## Script Interactions
 

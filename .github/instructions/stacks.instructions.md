@@ -70,5 +70,5 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../_common.sh"
 
 - **Go:** Database management only (migrate, rollback, seed). Requires `golang-migrate` CLI and PostgreSQL client tools.
 - **Node.js:** Supports npm/yarn/pnpm via `PACKAGE_MANAGER` config variable. All 5 scripts use a `pm_install`/`pm_run` helper to abstract the package manager. `verify.sh` checks for eslint, jest/vitest, and tsc. `preflight-checks.sh` runs lint, type-check, tests, and Docker Compose validation.
-- **PHP:** Includes `check-complexity.php` (the only PHP file in the repo). `preflight-checks.sh` supports `--coverage-min=N` flag.
+- **PHP:** Includes `check-complexity.php` for cyclomatic complexity analysis. `preflight-checks.sh` supports `--coverage-min=N` flag. Note: `dashboard/` also contains PHP files.
 - **Python:** Uses venv-based workflow. `preflight-checks.sh` checks for Docker Compose availability.

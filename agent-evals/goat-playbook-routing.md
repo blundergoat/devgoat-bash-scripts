@@ -5,7 +5,8 @@
 
 **Bug description:** Generic workflow names such as `preflight`, `audit`, and `review` were ambiguous with built-in concepts and other agent assets. The workflow was renamed to `goat-*` to make Codex routing explicit and stop shadowing collisions.
 
-**Replay prompt:**
+## Replay Prompt
+
 ```text
 I need the preflight playbook for this repo. Use it to outline the verification plan for a change touching help.sh and dashboard/start-dev.sh, but don't make edits.
 ```

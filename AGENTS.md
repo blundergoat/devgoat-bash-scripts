@@ -68,7 +68,6 @@ MUST update when tripped (DoD gate #4). SHOULD load only the router targets need
 | --- | --- |
 | `docs/lessons.md` | Behavioural mistake (agent did wrong) |
 | `docs/footguns.md` | Cross-domain landmine (file:line evidence) |
-| `docs/confusion-log.md` | Structural confusion (hard to navigate) |
 Mechanical trigger: if VERIFY caught a failure in code you wrote, or you corrected course, `docs/lessons.md` entry required before DoD satisfied. After human correction, MUST log immediately. Read shared files before appending. Propagate footguns to the nearest routed instruction doc.
 
 ## Autonomy Tiers
@@ -117,7 +116,6 @@ Ask exactly one question, include a recommended default, and stop after the ques
 | Ownership split | `docs/guidelines-ownership-split.md` |
 | Footguns | `docs/footguns.md` |
 | Lessons | `docs/lessons.md` |
-| Confusion log | `docs/confusion-log.md` |
 | Domain instructions | `.github/instructions/*.instructions.md` |
 | Codex preflight | `docs/codex-playbooks/goat-preflight.md` |
 | Codex research | `docs/codex-playbooks/goat-research.md` |

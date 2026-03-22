@@ -5,7 +5,8 @@
 
 **Bug description:** `scripts/context-validate.sh` used to fail hard when `tasks/todo.md` or `tasks/handoff.md` were absent, even though those files are optional runtime scratchpads in a fresh checkout.
 
-**Replay prompt:**
+## Replay Prompt
+
 ```text
 Review scripts/context-validate.sh and tell me what should happen if a fresh clone does not have tasks/todo.md or tasks/handoff.md yet. Don't change anything.
 ```

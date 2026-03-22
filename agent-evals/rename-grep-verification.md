@@ -5,7 +5,8 @@
 
 **Bug description:** When `dashboard/start.sh` was renamed to `dashboard/start-dev.sh`, references to the old name existed in CHANGELOG.md, README.md, help.sh, and docs/code-map.md. Missing any reference would leave stale pointers.
 
-**Replay prompt:**
+## Replay Prompt
+
 ```
 Rename lib/maintenance/make-scripts-executable.sh to lib/maintenance/fix-permissions.sh
 ```
