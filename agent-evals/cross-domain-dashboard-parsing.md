@@ -1,5 +1,8 @@
 # Eval: Cross-Domain Dashboard Parsing
 
+**Skill:** goat-debug
+**Agents:** all
+
 **Origin:** real-incident (commit 9bfc8b5, documented in docs/footguns.md)
 **Agents:** all
 

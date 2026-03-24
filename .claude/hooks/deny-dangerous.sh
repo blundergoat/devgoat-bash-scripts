@@ -1,113 +1,90 @@
 #!/usr/bin/env bash
-# PreToolUse hook: deny dangerous commands and file writes
-# Exit 2 = block with message. Exit 0 = allow.
-# Handles Bash (command patterns), Write/Edit (file path patterns).
-# Omits -e so every check runs and the final exit 0 is always reached.
-
+# PreToolUse hook: blocks dangerous commands before execution.
+# Exit 0 = allow, Exit 2 = block (stderr shown as reason).
 set -uo pipefail
 
 INPUT=$(cat)
 
-# Extract fields — try jq first, fall back to grep+sed if jq is missing
-if command -v jq &>/dev/null; then
-    COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
-    FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
+# Parse command from JSON using jq (falls back to raw input if jq unavailable)
+if command -v jq >/dev/null 2>&1; then
+  COMMAND=$(echo "$INPUT" | jq -r '.command // .input // empty' 2>/dev/null || echo "$INPUT")
 else
-    COMMAND=$(echo "$INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/^"command"[[:space:]]*:[[:space:]]*"//;s/"$//' 2>/dev/null || true)
-    FILE_PATH=$(echo "$INPUT" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/^"file_path"[[:space:]]*:[[:space:]]*"//;s/"$//' 2>/dev/null || true)
+  # Fallback: extract with sed (less reliable but portable)
+  COMMAND=$(echo "$INPUT" | sed -n 's/.*"command"\s*:\s*"\([^"]*\)".*/\1/p' | head -1)
+  [[ -z "$COMMAND" ]] && COMMAND="$INPUT"
 fi
 
-# Nothing to check
-[[ -z "$COMMAND" ]] && [[ -z "$FILE_PATH" ]] && exit 0
+block() {
+  echo "BLOCKED: $1" >&2
+  exit 2
+}
 
-# --- Write/Edit tool: check file path ---
-if [[ -n "$FILE_PATH" ]]; then
-    # .env file modifications
-    if echo "$FILE_PATH" | grep -qE '(^|/)\.env($|\.)'; then
-        echo "BLOCKED: .env file modification. Edit .env files manually." >&2
-        exit 2
+check_segment() {
+  local cmd="$1"
+
+  # rm -rf without scoping (handles both -rf and -fr flag order)
+  if [[ "$cmd" =~ rm[[:space:]]+-[a-zA-Z]*r[a-zA-Z]*f|rm[[:space:]]+-[a-zA-Z]*f[a-zA-Z]*r ]]; then
+    if ! [[ "$cmd" =~ rm[[:space:]]+-(rf|fr)[[:space:]]+(\./|[a-zA-Z]) ]]; then
+      block "rm -rf without safe scoping"
     fi
+  fi
 
-    # Lockfile modifications
-    if echo "$FILE_PATH" | grep -qE '(^|/)(package-lock\.json|pnpm-lock\.yaml|composer\.lock|Cargo\.lock|yarn\.lock)$'; then
-        echo "BLOCKED: lockfile modification. Use the package manager." >&2
-        exit 2
+  # Direct push to main/master (case-insensitive via lowercased copy)
+  local cmd_lower="${cmd,,}"
+  if [[ "$cmd_lower" =~ git[[:space:]]+push[[:space:]]+.*(main|master) ]]; then
+    block "Direct push to main/master"
+  fi
+
+  # Force push
+  if [[ "$cmd" =~ git[[:space:]]+push[[:space:]]+.*--force ]]; then
+    block "git push --force"
+  fi
+
+  # chmod 777
+  if [[ "$cmd" =~ chmod[[:space:]]+777 ]]; then
+    block "chmod 777"
+  fi
+
+  # Pipe to shell
+  if [[ "$cmd" =~ (curl|wget)[^|]*\|[[:space:]]*(ba)?sh ]]; then
+    block "pipe-to-shell (curl|bash)"
+  fi
+
+  # .env modifications (matches .env, .env.local, .env.production, etc.)
+  if [[ "$cmd" =~ (\>|\>\>|tee|sed[[:space:]]+-i|nano|vim?|code)[[:space:]]+.*\.env($|[[:space:]]|\.) ]]; then
+    block ".env file modification"
+  fi
+
+  # --no-verify bypass
+  if [[ "$cmd" =~ git[[:space:]]+.*--no-verify ]]; then
+    block "git --no-verify (hook bypass)"
+  fi
+
+  # Lockfile modifications
+  if [[ "$cmd" =~ (\>|\>\>|tee|sed[[:space:]]+-i)[[:space:]]+.*(package-lock\.json|pnpm-lock\.yaml|composer\.lock|Cargo\.lock|yarn\.lock) ]]; then
+    block "Lockfile modification"
+  fi
+
+  # Generated code / migration modifications
+  if [[ "$cmd" =~ (\>|\>\>|tee|sed[[:space:]]+-i)[[:space:]]+.*(\.generated\.|\.g\.|migrations/) ]]; then
+    block "Generated code / migration modification"
+  fi
+
+  # mv without -n (no-clobber) -- can silently overwrite destination
+  if [[ "$cmd" =~ ^[[:space:]]*mv[[:space:]]+ ]]; then
+    if ! [[ "$cmd" =~ mv.*[[:space:]](-[^[:space:]]*n[^[:space:]]*|--no-clobber)([[:space:]]|$) ]]; then
+      block "Use 'mv -n' instead of 'mv' to prevent overwriting existing files"
     fi
+  fi
+}
 
-    # Generated code modifications
-    if echo "$FILE_PATH" | grep -qE '\.(generated|min)\.(js|css|sh)$'; then
-        echo "BLOCKED: generated file modification. Regenerate from source." >&2
-        exit 2
-    fi
-fi
+# Split on command chaining operators and check each segment
+IFS=$'\n' read -r -d '' -a segments < <(echo "$COMMAND" | sed 's/&&/\n/g; s/||/\n/g; s/;/\n/g' && printf '\0') || true
 
-# --- Bash tool: check command ---
-[[ -z "$COMMAND" ]] && exit 0
-
-# rm -rf without explicit path scoping
-if echo "$COMMAND" | grep -qE 'rm\s+-[a-zA-Z]*r[a-zA-Z]*f|rm\s+-[a-zA-Z]*f[a-zA-Z]*r' ; then
-    if echo "$COMMAND" | grep -qE 'rm\s+-rf\s+/\s|rm\s+-rf\s+/$|rm\s+-rf\s+~|rm\s+-rf\s+\.\s|rm\s+-rf\s+\*'; then
-        echo "BLOCKED: rm -rf with dangerous target. Use a specific path instead." >&2
-        exit 2
-    fi
-fi
-
-# Force push (allow --force-with-lease)
-if echo "$COMMAND" | grep -qE 'git\s+push\s+.*--force' && ! echo "$COMMAND" | grep -qF 'force-with-lease'; then
-    echo "BLOCKED: git push --force. Use --force-with-lease instead." >&2
-    exit 2
-fi
-
-# Push to main/master/production
-if echo "$COMMAND" | grep -qE 'git\s+push\s+(origin\s+)?(main|master|production)\b'; then
-    echo "BLOCKED: direct push to main/master/production. Use a feature branch and PR." >&2
-    exit 2
-fi
-
-# chmod 777
-if echo "$COMMAND" | grep -qE 'chmod\s+777'; then
-    echo "BLOCKED: chmod 777 is overly permissive. Use specific permissions (755, 644, etc.)." >&2
-    exit 2
-fi
-
-# Pipe to shell
-if echo "$COMMAND" | grep -qE '(curl|wget)\s.*\|\s*(bash|sh|zsh)'; then
-    echo "BLOCKED: pipe-to-shell pattern. Download first, inspect, then execute." >&2
-    exit 2
-fi
-
-# .env modifications via Bash
-if echo "$COMMAND" | grep -qE '(>|>>|tee|sed\s+-i|vim|nano|cat\s+>)\s*\.env'; then
-    echo "BLOCKED: .env file modification. Edit .env files manually." >&2
-    exit 2
-fi
-
-# Skip commit hooks
-if echo "$COMMAND" | grep -qE 'git\s+commit\s+.*--no-verify|git\s+commit\s+.*-n\b'; then
-    echo "BLOCKED: --no-verify skips safety hooks. Fix the hook failure instead." >&2
-    exit 2
-fi
-
-# Direct edits to CONFIGURATION block values (template placeholders)
-if echo "$COMMAND" | grep -qE 'sed\s.*CONFIGURATION|awk\s.*CONFIGURATION'; then
-    echo "BLOCKED: CONFIGURATION blocks are template placeholders. Do not modify values directly — users override via environment variables." >&2
-    exit 2
-fi
-
-# Lockfile modifications via Bash (two-step: check name, then write operation)
-if echo "$COMMAND" | grep -qE '\b(package-lock\.json|pnpm-lock\.yaml|composer\.lock|Cargo\.lock|yarn\.lock)\b'; then
-    if echo "$COMMAND" | grep -qE 'sed\s+-i|>\s|>>\s|\btee\b|\bvim\b|\bnano\b'; then
-        echo "BLOCKED: lockfile modification. Use the package manager to update lockfiles." >&2
-        exit 2
-    fi
-fi
-
-# Generated code modifications via Bash
-if echo "$COMMAND" | grep -qE '\.(generated|min)\.(js|css|sh)\b'; then
-    if echo "$COMMAND" | grep -qE 'sed\s+-i|>\s|>>\s|\btee\b|\bvim\b|\bnano\b'; then
-        echo "BLOCKED: generated file modification. Regenerate from source instead." >&2
-        exit 2
-    fi
-fi
+for segment in "${segments[@]}"; do
+  segment=$(echo "$segment" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  [[ -z "$segment" ]] && continue
+  check_segment "$segment"
+done
 
 exit 0

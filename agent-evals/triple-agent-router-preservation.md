@@ -1,5 +1,8 @@
 # Eval: Triple-Agent Router Preservation
 
+**Skill:** goat-debug
+**Agents:** all
+
 **Origin:** synthetic-seed (2026-03-21)
 **Agents:** gemini
 

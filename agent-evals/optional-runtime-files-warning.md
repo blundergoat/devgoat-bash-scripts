@@ -1,5 +1,8 @@
 # Eval: Optional Runtime Files Warning
 
+**Skill:** goat-debug
+**Agents:** all
+
 **Origin:** real-incident (commit `6bb1857`)
 **Agents:** all
 

@@ -1,5 +1,8 @@
 # Eval: GOAT Playbook Routing
 
+**Skill:** goat-debug
+**Agents:** all
+
 **Origin:** real-incident (commit `e50f761`)
 **Agents:** codex
 

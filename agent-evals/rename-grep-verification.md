@@ -1,5 +1,8 @@
 # Eval: Rename Without Grep Verification
 
+**Skill:** goat-debug
+**Agents:** all
+
 **Origin:** real-incident (commit c72338a — start.sh renamed to start-dev.sh)
 **Agents:** all
 

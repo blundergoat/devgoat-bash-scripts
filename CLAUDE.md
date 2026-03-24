@@ -15,8 +15,8 @@ bats tests/ --recursive              # Run test suite
 
 **READ** — MUST read relevant files before changes. Cross-domain: MUST read both sides.
 ```
-❌ "The _common.sh uses parent traversal" (guessed)
-✅ Read lib/stacks/_common.sh → confirmed: source "../_common.sh"
+BAD:  "The _common.sh uses parent traversal" (guessed without reading)
+GOOD: Read lib/stacks/_common.sh:7 → confirmed: source "../_common.sh"
 ```
 **CLASSIFY** — MUST declare 3 signals before acting:
 (1) Intent: question = answer; directive = act. MUST NOT infer implementation. (2) Complexity: Hotfix (2/3) | Standard (4/10) | System (6/20) | Infra (8/25). Over budget = re-classify. (3) Mode: Plan / Implement / Explain / Debug / Review.
@@ -35,8 +35,8 @@ No actions outside declared state without: "Switching to [NEW STATE] because [re
 | Review | Investigate first. Never blindly apply suggestions |
 
 ```
-❌ Created abstract logging base class (one implementation)
-✅ Inline functions. Extract when second consumer appears
+BAD:  Created abstract logging base class (one implementation exists)
+GOOD: Inline helpers. Extract when second consumer appears
 ```
 **VERIFY** — MUST run after each change: `bash -n` → `shellcheck` → `bats tests/ --recursive`
 - Level 1 (isolated failure): note, continue. Level 2 (cross-domain/security): MUST full stop, diagnosis with file:line, wait for human
@@ -60,7 +60,7 @@ Propagate footguns as one-line summaries to relevant local CLAUDE.md.
 **Always:** Run tests/lint, read any file, write scripts, append to log files
 
 **Ask First** (project-specific boundaries for `lib/`, `lib/aws/`, `lib/stacks/`, `lib/ai-cli/`):
-- `_common.sh` / `_aws-common.sh` changes (sourced by many scripts)
+- `lib/stacks/_common.sh` / `lib/ai-cli/_common.sh` / `lib/aws/_aws-common.sh` changes (sourced by many scripts)
 - CONFIGURATION block interface changes (adding/removing variables)
 - Scripts in `lib/ai-cli/` that sanitise WSL PATH
 - Adding new domains/directories under `lib/`
@@ -105,7 +105,6 @@ When sources conflict: (1) user's explicit instruction > (2) CLAUDE.md > (3) set
 | Lessons | `docs/lessons.md` |
 | Decisions | `docs/decisions/` |
 | Instructions | `ai/instructions/`, `.github/instructions/` |
-| Preflight skill | `.claude/skills/goat-preflight/` |
 | Investigate skill | `.claude/skills/goat-investigate/` |
 | Debug skill | `.claude/skills/goat-debug/` |
 | Audit skill | `.claude/skills/goat-audit/` |

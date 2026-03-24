@@ -1,5 +1,8 @@
 # Eval: Skill Directory Validation Path
 
+**Skill:** goat-debug
+**Agents:** all
+
 **Origin:** real-incident (commit `85c1e02`)
 **Agents:** all
 

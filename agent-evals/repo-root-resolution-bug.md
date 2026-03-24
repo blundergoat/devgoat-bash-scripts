@@ -1,5 +1,8 @@
 # Eval: REPO_ROOT Resolution Bug
 
+**Skill:** goat-debug
+**Agents:** all
+
 **Origin:** real-incident (commit c72338a)
 **Agents:** all
 

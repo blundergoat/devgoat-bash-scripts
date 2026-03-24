@@ -1,5 +1,8 @@
 # Eval: AWS Empty Output Crash
 
+**Skill:** goat-debug
+**Agents:** all
+
 **Origin:** real-incident (commits 0c6c604, 00a00b9)
 **Agents:** all
 

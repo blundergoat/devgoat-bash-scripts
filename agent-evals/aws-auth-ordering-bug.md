@@ -1,5 +1,8 @@
 # Eval: AWS CLI Auth Ordering Bug
 
+**Skill:** goat-debug
+**Agents:** all
+
 **Origin:** real-incident (commit 76d7fef)
 **Agents:** all
 

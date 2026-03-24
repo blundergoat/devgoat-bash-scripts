@@ -7,7 +7,7 @@ Routing map for AI coding agent instruction files.
 ```
 ai/
   instructions/
-    base.md              # Bash conventions, strict mode, shellcheck, bats
+    conventions.md       # Bash conventions, strict mode, shellcheck, bats
     code-review.md       # Review standards for shell scripts
     git-commit.md        # Commit message format and scope rules
 ```
